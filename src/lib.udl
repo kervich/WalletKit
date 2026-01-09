@@ -1,0 +1,27 @@
+[Error]
+interface Error {
+    InvalidData(string description);
+    InvalidDerivationPath(string description);
+    InvalidKeystore();
+    SuiError(string description);
+};
+
+interface Keystore {
+    constructor();
+
+    [Async, Throws=Error]
+    void add_key(string alias, sequence<u8> seed, string derivation_path, SignatureScheme scheme);
+};
+
+enum SignatureScheme {
+    "BLS12381",
+    "ED25519",
+    "MultiSig",
+    "Secp256k1",
+    "Secp256r1",
+    "ZkLoginAuthenticator",
+    "PasskeyAuthenticator",
+};
+
+namespace WalletKit {
+};
