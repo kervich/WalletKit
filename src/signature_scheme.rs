@@ -10,7 +10,7 @@ pub enum SignatureScheme {
     PasskeyAuthenticator,
 }
 
-impl From<SignatureScheme> for sui_types::crypto::SignatureScheme {
+impl From<SignatureScheme> for SuiSignatureScheme {
     fn from(scheme: SignatureScheme) -> Self {
         match scheme {
             SignatureScheme::BLS12381 => SuiSignatureScheme::BLS12381,

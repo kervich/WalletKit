@@ -5,7 +5,18 @@ pub enum Error {
     InvalidData { description: String },
     InvalidDerivationPath { description: String },
     InvalidKeystore,
+    InvalidMnemonic { description: String },
+    InvalidSeedLength { description: String },
+    NotImplemented,
     SuiError { description: String },
+}
+
+impl Error {
+    pub fn invalid_seed_length(length: usize) -> Self {
+        Error::InvalidSeedLength {
+            description: format!("Invalid seed length: {}", length),
+        }
+    }
 }
 
 // Error
@@ -16,6 +27,9 @@ impl Error {
             Error::InvalidData { description } => description.clone(),
             Error::InvalidDerivationPath { description } => description.clone(),
             Error::InvalidKeystore => "Invalid keystore".to_string(),
+            Error::InvalidMnemonic { description } => description.clone(),
+            Error::InvalidSeedLength { description } => description.clone(),
+            Error::NotImplemented => "Not implemented".to_string(),
             Error::SuiError { description } => description.clone(),
         }
     }

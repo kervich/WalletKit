@@ -1,12 +1,13 @@
 uniffi::include_scaffolding!("lib");
 
-mod sui;
-mod types;
+mod error;
+mod keystore;
+mod mnemonic;
+mod signature_scheme;
 
 use crate::{
-    sui::{
-        keystore::Keystore,
-        signature_scheme::SignatureScheme,
-    },
-    types::error::Error,
+    error::Error,
+    keystore::KeyStore,
+    mnemonic::Mnemonic,
+    signature_scheme::SignatureScheme,
 };

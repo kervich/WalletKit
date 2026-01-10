@@ -823,6 +823,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bip39"
+version = "2.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90dbd31c98227229239363921e60fcf5e558e43ec69094d46fc4996f08d1d5bc"
+dependencies = [
+ "bitcoin_hashes",
+ "serde",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6376,9 +6387,12 @@ name = "walletkit"
 version = "0.1.0"
 dependencies = [
  "bip32",
+ "bip39",
+ "hex",
  "sui-keys",
  "sui-types",
  "uniffi",
+ "uuid",
 ]
 
 [[package]]

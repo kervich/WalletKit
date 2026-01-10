@@ -3,14 +3,44 @@ interface Error {
     InvalidData(string description);
     InvalidDerivationPath(string description);
     InvalidKeystore();
+    InvalidMnemonic(string description);
+    InvalidSeedLength(string description);
+    NotImplemented();
     SuiError(string description);
 };
 
-interface Keystore {
+interface KeyStore {
+    [Throws=Error]
+    constructor(sequence<u8> entropy, string? passphrase);
+
+    [Throws=Error, Name=new_from_mnemonic]
+    constructor(string mnemonic, string? passphrase);
+
+    [Throws=Error, Name=from_storage_string]
+    constructor(string storage_string);
+
+    [Name=preview]
     constructor();
 
+    string to_storage_string();
+
     [Async, Throws=Error]
-    void add_key(string alias, sequence<u8> seed, string derivation_path, SignatureScheme scheme);
+    string get_sui_address(string derivation_path, SignatureScheme key_scheme);
+
+    [Async, Throws=Error]
+    string get_evm_address(string derivation_path);
+};
+
+interface Mnemonic {
+    [Throws=Error, Name=from_seed_phrase]
+    constructor(string seed_phrase);
+
+    [Throws=Error, Name=from_entropy]
+    constructor(sequence<u8> entropy);
+
+    string seed_phrase();
+    sequence<u8> entropy();
+    sequence<u8> entropy_with_passphrase(string passphrase);
 };
 
 enum SignatureScheme {
