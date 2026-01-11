@@ -1,10 +1,11 @@
 use bip39::Mnemonic;
-use sui_keys::key_derive::derive_key_pair_from_path;
+use sui_keys::key_derive::derive_key_pair_from_path as sui_derive_key_pair_from_path;
 use uuid::Uuid;
 
 use crate::{
-    signature_scheme::SignatureScheme,
+    evm_keys::derive_key_pair_from_path as evm_derive_key_pair_from_path,
     error::Error,
+    signature_scheme::SignatureScheme,
 };
 
 pub struct KeyStore {
@@ -77,11 +78,18 @@ impl KeyStore {
         &self,
         derivation_path: String,
     ) -> Result<String, Error> {
-        /* let derivation_path = derivation_path
+        let derivation_path = derivation_path
             .parse::<bip32::DerivationPath>()
-            .map_err(|e| Error::InvalidDerivationPath { description: e.to_string() })?; */
+            .map_err(|e| Error::InvalidDerivationPath { description: e.to_string() })?;
 
-        Err(Error::NotImplemented)
+        let (address, _keypair) =
+            evm_derive_key_pair_from_path(
+                &self.seed,
+                derivation_path,
+            )
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        Ok(address.to_string())
     }
 
     pub async fn get_sui_address(
@@ -94,7 +102,7 @@ impl KeyStore {
             .map_err(|e| Error::InvalidDerivationPath { description: e.to_string() })?;
 
         let (address, _keypair) =
-            derive_key_pair_from_path(
+            sui_derive_key_pair_from_path(
                 &self.seed,
                 Some(derivation_path),
                 &key_scheme.into(),

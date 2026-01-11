@@ -817,6 +817,8 @@ public enum Error: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case InvalidSeedLength(description: String
     )
+    case KeyDerivationError(description: String
+    )
     case NotImplemented
     case SuiError(description: String
     )
@@ -860,8 +862,11 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
         case 5: return .InvalidSeedLength(
             description: try FfiConverterString.read(from: &buf)
             )
-        case 6: return .NotImplemented
-        case 7: return .SuiError(
+        case 6: return .KeyDerivationError(
+            description: try FfiConverterString.read(from: &buf)
+            )
+        case 7: return .NotImplemented
+        case 8: return .SuiError(
             description: try FfiConverterString.read(from: &buf)
             )
 
@@ -900,12 +905,17 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
             FfiConverterString.write(description, into: &buf)
             
         
-        case .NotImplemented:
+        case let .KeyDerivationError(description):
             writeInt(&buf, Int32(6))
+            FfiConverterString.write(description, into: &buf)
+            
+        
+        case .NotImplemented:
+            writeInt(&buf, Int32(7))
         
         
         case let .SuiError(description):
-            writeInt(&buf, Int32(7))
+            writeInt(&buf, Int32(8))
             FfiConverterString.write(description, into: &buf)
             
         }

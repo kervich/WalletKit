@@ -5,6 +5,7 @@ interface Error {
     InvalidKeystore();
     InvalidMnemonic(string description);
     InvalidSeedLength(string description);
+    KeyDerivationError(string description);
     NotImplemented();
     SuiError(string description);
 };

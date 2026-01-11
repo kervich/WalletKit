@@ -7,6 +7,7 @@ pub enum Error {
     InvalidKeystore,
     InvalidMnemonic { description: String },
     InvalidSeedLength { description: String },
+    KeyDerivationError { description: String },
     NotImplemented,
     SuiError { description: String },
 }
@@ -29,6 +30,7 @@ impl Error {
             Error::InvalidKeystore => "Invalid keystore".to_string(),
             Error::InvalidMnemonic { description } => description.clone(),
             Error::InvalidSeedLength { description } => description.clone(),
+            Error::KeyDerivationError { description } => description.clone(),
             Error::NotImplemented => "Not implemented".to_string(),
             Error::SuiError { description } => description.clone(),
         }
