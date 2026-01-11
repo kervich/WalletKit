@@ -1,9 +1,7 @@
 use bip32::{ DerivationPath, XPrv };
 use ethers::{core::k256::SecretKey, signers::{ LocalWallet, Signer}};
 
-use crate::{
-    error::Error,
-};
+use crate::error::Error;
 
 pub type EvmAddress = String;
 
@@ -25,7 +23,7 @@ pub fn derive_key_pair_from_path(
         .map_err(|e| Error::KeyDerivationError { description: e.to_string() })?;
 
     let wallet = LocalWallet::from(secret_key);
-    let address = wallet.address().to_string();
+    let address = format!("{:#x}", wallet.address());
 
     Ok((address, EvmSigner { wallet }))
 }
