@@ -1,3 +1,5 @@
+export MACOSX_DEPLOYMENT_TARGET ?= 15.0
+
 .PHONY: all clean
 
 all: spm

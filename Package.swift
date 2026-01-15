@@ -1,6 +1,6 @@
 // swift-tools-version:5.5
 
-import PackageDescription;
+import PackageDescription
 
 let package = Package(
     name: "WalletKit",
@@ -23,6 +23,6 @@ let package = Package(
                 .target(name: "RustFramework")
             ],
             path: "./WalletKit/Sources"
-        ),
+        )
     ]
 )

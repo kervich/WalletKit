@@ -17,9 +17,14 @@ fastcrypto = "0.1.9"
 hex = "0.4.3"
 sui_keys = { git = "https://github.com/mystenlabs/sui", package = "sui-keys" }
 sui_types = { git = "https://github.com/mystenlabs/sui", package = "sui-types" }
-# tokio = { version = "1.47.1", features = ["full"] }
 uniffi = "0.30"
 uuid = { version = "1.19.0", features = ["v4"] }
 
 [build-dependencies]
 uniffi = { version = "0.30", features = ["build"] }
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
