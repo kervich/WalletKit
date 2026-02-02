@@ -1,3 +1,9 @@
+interface AddressValidator {
+    constructor();
+    boolean validate_evm_address(string address);
+    boolean validate_sui_address(string address);
+};
+
 [Error]
 interface Error {
     InvalidData(string description);
