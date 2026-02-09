@@ -435,6 +435,30 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -472,6 +496,136 @@ fileprivate struct FfiConverterString: FfiConverter {
         writeBytes(&buf, value.utf8)
     }
 }
+
+
+
+
+public protocol AddressValidatorProtocol: AnyObject, Sendable {
+    
+    func validateEvmAddress(address: String)  -> Bool
+    
+    func validateSuiAddress(address: String)  -> Bool
+    
+}
+open class AddressValidator: AddressValidatorProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_walletkit_fn_clone_addressvalidator(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_walletkit_fn_constructor_addressvalidator_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_walletkit_fn_free_addressvalidator(handle, $0) }
+    }
+
+    
+
+    
+open func validateEvmAddress(address: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_addressvalidator_validate_evm_address(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(address),$0
+    )
+})
+}
+    
+open func validateSuiAddress(address: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_addressvalidator_validate_sui_address(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(address),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAddressValidator: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = AddressValidator
+
+    public static func lift(_ handle: UInt64) throws -> AddressValidator {
+        return AddressValidator(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: AddressValidator) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AddressValidator {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: AddressValidator, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAddressValidator_lift(_ handle: UInt64) throws -> AddressValidator {
+    return try FfiConverterTypeAddressValidator.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAddressValidator_lower(_ value: AddressValidator) -> UInt64 {
+    return FfiConverterTypeAddressValidator.lower(value)
+}
+
+
 
 
 
@@ -1149,6 +1303,12 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_walletkit_checksum_method_addressvalidator_validate_evm_address() != 7918) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_addressvalidator_validate_sui_address() != 57568) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_walletkit_checksum_method_keystore_get_evm_address() != 63287) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1165,6 +1325,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_mnemonic_seed_phrase() != 54900) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_constructor_addressvalidator_new() != 47207) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_constructor_keystore_from_storage_string() != 38206) {

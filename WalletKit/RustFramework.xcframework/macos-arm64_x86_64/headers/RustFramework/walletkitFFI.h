@@ -243,6 +243,32 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureRes
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_ADDRESSVALIDATOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_ADDRESSVALIDATOR
+uint64_t uniffi_walletkit_fn_clone_addressvalidator(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_ADDRESSVALIDATOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_ADDRESSVALIDATOR
+void uniffi_walletkit_fn_free_addressvalidator(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ADDRESSVALIDATOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ADDRESSVALIDATOR_NEW
+uint64_t uniffi_walletkit_fn_constructor_addressvalidator_new(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ADDRESSVALIDATOR_VALIDATE_EVM_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ADDRESSVALIDATOR_VALIDATE_EVM_ADDRESS
+int8_t uniffi_walletkit_fn_method_addressvalidator_validate_evm_address(uint64_t ptr, RustBuffer address, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ADDRESSVALIDATOR_VALIDATE_SUI_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ADDRESSVALIDATOR_VALIDATE_SUI_ADDRESS
+int8_t uniffi_walletkit_fn_method_addressvalidator_validate_sui_address(uint64_t ptr, RustBuffer address, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_KEYSTORE
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_KEYSTORE
 uint64_t uniffi_walletkit_fn_clone_keystore(uint64_t handle, RustCallStatus *_Nonnull out_status
@@ -584,6 +610,18 @@ void ffi_walletkit_rust_future_free_void(uint64_t handle
 void ffi_walletkit_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ADDRESSVALIDATOR_VALIDATE_EVM_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ADDRESSVALIDATOR_VALIDATE_EVM_ADDRESS
+uint16_t uniffi_walletkit_checksum_method_addressvalidator_validate_evm_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ADDRESSVALIDATOR_VALIDATE_SUI_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ADDRESSVALIDATOR_VALIDATE_SUI_ADDRESS
+uint16_t uniffi_walletkit_checksum_method_addressvalidator_validate_sui_address(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_KEYSTORE_GET_EVM_ADDRESS
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_KEYSTORE_GET_EVM_ADDRESS
 uint16_t uniffi_walletkit_checksum_method_keystore_get_evm_address(void
@@ -617,6 +655,12 @@ uint16_t uniffi_walletkit_checksum_method_mnemonic_entropy_with_passphrase(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_MNEMONIC_SEED_PHRASE
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_MNEMONIC_SEED_PHRASE
 uint16_t uniffi_walletkit_checksum_method_mnemonic_seed_phrase(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ADDRESSVALIDATOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ADDRESSVALIDATOR_NEW
+uint16_t uniffi_walletkit_checksum_constructor_addressvalidator_new(void
     
 );
 #endif
