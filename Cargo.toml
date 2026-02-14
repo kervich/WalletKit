@@ -10,21 +10,27 @@ crate-type = ["staticlib", "lib"]
 name = "walletkit"
 
 [dependencies]
+alloy = { version = "1.6.3", features = [
+    "full",
+    "signer-keystore",
+    "signer-mnemonic",
+    "signer-trezor"
+] }
+
+alloy-primitives = "1.5.6"
+
 bip32 = "0.4.0"
 bip39 = "2.2.2"
-ethers = "2.0.14"
-fastcrypto = "0.1.9"
 hex = "0.4.3"
 sui_keys = { git = "https://github.com/mystenlabs/sui", package = "sui-keys" }
 sui_types = { git = "https://github.com/mystenlabs/sui", package = "sui-types" }
 uniffi = "0.30"
-uuid = { version = "1.19.0", features = ["v4"] }
 
 [build-dependencies]
 uniffi = { version = "0.30", features = ["build"] }
 
 [target.aarch64-apple-darwin]
-rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=15.0"]
 
 [target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-mmacosx-version-min=10.15"]
+rustflags = ["-C", "link-arg=-mmacosx-version-min=15.0"]

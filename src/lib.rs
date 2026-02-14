@@ -1,16 +1,22 @@
 uniffi::include_scaffolding!("lib");
 
-mod address_validator;
 mod error;
-mod evm_keys;
-mod keystore;
+mod alloy_client;
+mod sui_client;
 mod mnemonic;
 mod signature_scheme;
 
 use crate::{
-    address_validator::AddressValidator,
     error::Error,
-    keystore::KeyStore,
+    alloy_client::AlloyClient,
     mnemonic::Mnemonic,
     signature_scheme::SignatureScheme,
+    sui_client::SuiClient,
 };
+
+pub trait BlockchainClient: Send + Sync {
+    fn address(&self) -> String;
+    fn derivation_path(&self) -> Option<String>;
+    fn is_active_address(&self, address: String) -> bool;
+    fn is_valid_address(&self, address: String) -> bool;
+}

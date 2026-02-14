@@ -1,41 +1,30 @@
-interface AddressValidator {
-    constructor();
-    boolean validate_evm_address(string address);
-    boolean validate_sui_address(string address);
+namespace WalletKit {
 };
 
 [Error]
 interface Error {
-    InvalidData(string description);
-    InvalidDerivationPath(string description);
-    InvalidKeystore();
-    InvalidMnemonic(string description);
-    InvalidSeedLength(string description);
-    KeyDerivationError(string description);
+    AlloyError(string description);
+    MnemonicError(string description);
     NotImplemented();
     SuiError(string description);
 };
 
-interface KeyStore {
+interface AlloyClient {
     [Throws=Error]
-    constructor(sequence<u8> entropy, string? passphrase);
+    constructor(u64 chain_id, u64 account_index, sequence<u8> private_key, string? password);
 
-    [Throws=Error, Name=new_from_mnemonic]
-    constructor(string mnemonic, string? passphrase);
+    [Async, Throws=Error, Name=new_trezor]
+    constructor(u64 chain_id, u64 account_index, string device_id);
 
-    [Throws=Error, Name=from_storage_string]
-    constructor(string storage_string);
+    [Throws=Error, Name=new_watch_only]
+    constructor(u64 chain_id, string address);
 
-    [Name=preview]
-    constructor();
+    string address();
+    u64 chain_id();
+    string? derivation_path();
 
-    string to_storage_string();
-
-    [Async, Throws=Error]
-    string get_sui_address(string derivation_path, SignatureScheme key_scheme);
-
-    [Async, Throws=Error]
-    string get_evm_address(string derivation_path);
+    boolean is_active_address(string address);
+    boolean is_valid_address(string address);
 };
 
 interface Mnemonic {
@@ -47,7 +36,20 @@ interface Mnemonic {
 
     string seed_phrase();
     sequence<u8> entropy();
-    sequence<u8> entropy_with_passphrase(string passphrase);
+};
+
+interface SuiClient {
+    [Throws=Error]
+    constructor(u64 account_index, SignatureScheme key_scheme, sequence<u8> private_key, string? password, string rpc_url);
+
+    [Throws=Error, Name=new_watch_only]
+    constructor(string address, string rpc_url);
+
+    string address();
+    string? derivation_path();
+
+    boolean is_active_address(string address);
+    boolean is_valid_address(string address);
 };
 
 enum SignatureScheme {
@@ -58,7 +60,4 @@ enum SignatureScheme {
     "Secp256r1",
     "ZkLoginAuthenticator",
     "PasskeyAuthenticator",
-};
-
-namespace WalletKit {
 };
