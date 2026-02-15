@@ -518,15 +518,17 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 public protocol AlloyClientProtocol: AnyObject, Sendable {
     
-    func address()  -> String
+    func address()  -> EthereumAddress
     
     func chainId()  -> UInt64
     
     func derivationPath()  -> String?
     
-    func isActiveAddress(address: String)  -> Bool
+    func getBalance() async throws  -> [UInt64]
     
-    func isValidAddress(address: String)  -> Bool
+    func isActiveAddress(address: EthereumAddress) async throws  -> Bool
+    
+    func rpcUrl()  -> String
     
 }
 open class AlloyClient: AlloyClientProtocol, @unchecked Sendable {
@@ -568,14 +570,15 @@ open class AlloyClient: AlloyClientProtocol, @unchecked Sendable {
     public func uniffiCloneHandle() -> UInt64 {
         return try! rustCall { uniffi_walletkit_fn_clone_alloyclient(self.handle, $0) }
     }
-public convenience init(chainId: UInt64, accountIndex: UInt64, privateKey: [UInt8], password: String?)throws  {
+public convenience init(chainId: UInt64, accountIndex: UInt64, privateKey: [UInt8], password: String?, rpcUrl: String)throws  {
     let handle =
         try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_walletkit_fn_constructor_alloyclient_new(
         FfiConverterUInt64.lower(chainId),
         FfiConverterUInt64.lower(accountIndex),
         FfiConverterSequenceUInt8.lower(privateKey),
-        FfiConverterOptionString.lower(password),$0
+        FfiConverterOptionString.lower(password),
+        FfiConverterString.lower(rpcUrl),$0
     )
 }
     self.init(unsafeFromHandle: handle)
@@ -586,11 +589,11 @@ public convenience init(chainId: UInt64, accountIndex: UInt64, privateKey: [UInt
     }
 
     
-public static func newTrezor(chainId: UInt64, accountIndex: UInt64, deviceId: String)async throws  -> AlloyClient  {
+public static func newTrezor(chainId: UInt64, accountIndex: UInt64, deviceId: String, rpcUrl: String)async throws  -> AlloyClient  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_walletkit_fn_constructor_alloyclient_new_trezor(FfiConverterUInt64.lower(chainId),FfiConverterUInt64.lower(accountIndex),FfiConverterString.lower(deviceId)
+                uniffi_walletkit_fn_constructor_alloyclient_new_trezor(FfiConverterUInt64.lower(chainId),FfiConverterUInt64.lower(accountIndex),FfiConverterString.lower(deviceId),FfiConverterString.lower(rpcUrl)
                 )
             },
             pollFunc: ffi_walletkit_rust_future_poll_u64,
@@ -601,19 +604,20 @@ public static func newTrezor(chainId: UInt64, accountIndex: UInt64, deviceId: St
         )
 }
     
-public static func newWatchOnly(chainId: UInt64, address: String)throws  -> AlloyClient  {
+public static func newWatchOnly(chainId: UInt64, address: EthereumAddress, rpcUrl: String)throws  -> AlloyClient  {
     return try  FfiConverterTypeAlloyClient_lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_walletkit_fn_constructor_alloyclient_new_watch_only(
         FfiConverterUInt64.lower(chainId),
-        FfiConverterString.lower(address),$0
+        FfiConverterTypeEthereumAddress_lower(address),
+        FfiConverterString.lower(rpcUrl),$0
     )
 })
 }
     
 
     
-open func address() -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
+open func address() -> EthereumAddress  {
+    return try!  FfiConverterTypeEthereumAddress_lift(try! rustCall() {
     uniffi_walletkit_fn_method_alloyclient_address(
             self.uniffiCloneHandle(),$0
     )
@@ -636,20 +640,44 @@ open func derivationPath() -> String?  {
 })
 }
     
-open func isActiveAddress(address: String) -> Bool  {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_walletkit_fn_method_alloyclient_is_active_address(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
-    )
-})
+open func getBalance()async throws  -> [UInt64]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_alloyclient_get_balance(
+                    self.uniffiCloneHandle()
+                    
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt64.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
 }
     
-open func isValidAddress(address: String) -> Bool  {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_walletkit_fn_method_alloyclient_is_valid_address(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
+open func isActiveAddress(address: EthereumAddress)async throws  -> Bool  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_alloyclient_is_active_address(
+                    self.uniffiCloneHandle(),
+                    FfiConverterTypeEthereumAddress_lower(address)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_i8,
+            completeFunc: ffi_walletkit_rust_future_complete_i8,
+            freeFunc: ffi_walletkit_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func rpcUrl() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_alloyclient_rpc_url(
+            self.uniffiCloneHandle(),$0
     )
 })
 }
@@ -697,6 +725,302 @@ public func FfiConverterTypeAlloyClient_lift(_ handle: UInt64) throws -> AlloyCl
 #endif
 public func FfiConverterTypeAlloyClient_lower(_ value: AlloyClient) -> UInt64 {
     return FfiConverterTypeAlloyClient.lower(value)
+}
+
+
+
+
+
+
+public protocol Erc20Protocol: AnyObject, Sendable {
+    
+    func address()  -> EthereumAddress
+    
+    func balanceOf(owner: EthereumAddress) async throws  -> [UInt64]
+    
+    func decimals() async throws  -> UInt8
+    
+    func symbol() async throws  -> String
+    
+}
+open class Erc20: Erc20Protocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_walletkit_fn_clone_erc20(self.handle, $0) }
+    }
+public convenience init(address: EthereumAddress, rpcUrl: String)throws  {
+    let handle =
+        try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_walletkit_fn_constructor_erc20_new(
+        FfiConverterTypeEthereumAddress_lower(address),
+        FfiConverterString.lower(rpcUrl),$0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_walletkit_fn_free_erc20(handle, $0) }
+    }
+
+    
+
+    
+open func address() -> EthereumAddress  {
+    return try!  FfiConverterTypeEthereumAddress_lift(try! rustCall() {
+    uniffi_walletkit_fn_method_erc20_address(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func balanceOf(owner: EthereumAddress)async throws  -> [UInt64]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_erc20_balance_of(
+                    self.uniffiCloneHandle(),
+                    FfiConverterTypeEthereumAddress_lower(owner)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt64.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func decimals()async throws  -> UInt8  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_erc20_decimals(
+                    self.uniffiCloneHandle()
+                    
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_u8,
+            completeFunc: ffi_walletkit_rust_future_complete_u8,
+            freeFunc: ffi_walletkit_rust_future_free_u8,
+            liftFunc: FfiConverterUInt8.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func symbol()async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_erc20_symbol(
+                    self.uniffiCloneHandle()
+                    
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeERC20: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Erc20
+
+    public static func lift(_ handle: UInt64) throws -> Erc20 {
+        return Erc20(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Erc20) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Erc20 {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Erc20, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeERC20_lift(_ handle: UInt64) throws -> Erc20 {
+    return try FfiConverterTypeERC20.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeERC20_lower(_ value: Erc20) -> UInt64 {
+    return FfiConverterTypeERC20.lower(value)
+}
+
+
+
+
+
+
+public protocol EthereumAddressProtocol: AnyObject, Sendable {
+    
+    func toString()  -> String
+    
+}
+open class EthereumAddress: EthereumAddressProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_walletkit_fn_clone_ethereumaddress(self.handle, $0) }
+    }
+public convenience init(string: String)throws  {
+    let handle =
+        try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_walletkit_fn_constructor_ethereumaddress_new(
+        FfiConverterString.lower(string),$0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_walletkit_fn_free_ethereumaddress(handle, $0) }
+    }
+
+    
+
+    
+open func toString() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_ethereumaddress_to_string(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEthereumAddress: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = EthereumAddress
+
+    public static func lift(_ handle: UInt64) throws -> EthereumAddress {
+        return EthereumAddress(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: EthereumAddress) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EthereumAddress {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: EthereumAddress, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEthereumAddress_lift(_ handle: UInt64) throws -> EthereumAddress {
+    return try FfiConverterTypeEthereumAddress.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEthereumAddress_lower(_ value: EthereumAddress) -> UInt64 {
+    return FfiConverterTypeEthereumAddress.lower(value)
 }
 
 
@@ -841,15 +1165,134 @@ public func FfiConverterTypeMnemonic_lower(_ value: Mnemonic) -> UInt64 {
 
 
 
+public protocol SuiAddressProtocol: AnyObject, Sendable {
+    
+    func toString()  -> String
+    
+}
+open class SuiAddress: SuiAddressProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_walletkit_fn_clone_suiaddress(self.handle, $0) }
+    }
+public convenience init(string: String)throws  {
+    let handle =
+        try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_walletkit_fn_constructor_suiaddress_new(
+        FfiConverterString.lower(string),$0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_walletkit_fn_free_suiaddress(handle, $0) }
+    }
+
+    
+
+    
+open func toString() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_suiaddress_to_string(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSuiAddress: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = SuiAddress
+
+    public static func lift(_ handle: UInt64) throws -> SuiAddress {
+        return SuiAddress(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: SuiAddress) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SuiAddress {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: SuiAddress, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSuiAddress_lift(_ handle: UInt64) throws -> SuiAddress {
+    return try FfiConverterTypeSuiAddress.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSuiAddress_lower(_ value: SuiAddress) -> UInt64 {
+    return FfiConverterTypeSuiAddress.lower(value)
+}
+
+
+
+
+
+
 public protocol SuiClientProtocol: AnyObject, Sendable {
     
-    func address()  -> String
+    func address()  -> SuiAddress
     
     func derivationPath()  -> String?
     
-    func isActiveAddress(address: String)  -> Bool
+    func getBalance(coinType: String) async throws  -> [UInt64]
     
-    func isValidAddress(address: String)  -> Bool
+    func isActiveAddress(address: SuiAddress) async throws  -> Bool
     
 }
 open class SuiClient: SuiClientProtocol, @unchecked Sendable {
@@ -910,10 +1353,10 @@ public convenience init(accountIndex: UInt64, keyScheme: SignatureScheme, privat
     }
 
     
-public static func newWatchOnly(address: String, rpcUrl: String)throws  -> SuiClient  {
+public static func newWatchOnly(address: SuiAddress, rpcUrl: String)throws  -> SuiClient  {
     return try  FfiConverterTypeSuiClient_lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_walletkit_fn_constructor_suiclient_new_watch_only(
-        FfiConverterString.lower(address),
+        FfiConverterTypeSuiAddress_lower(address),
         FfiConverterString.lower(rpcUrl),$0
     )
 })
@@ -921,8 +1364,8 @@ public static func newWatchOnly(address: String, rpcUrl: String)throws  -> SuiCl
     
 
     
-open func address() -> String  {
-    return try!  FfiConverterString.lift(try! rustCall() {
+open func address() -> SuiAddress  {
+    return try!  FfiConverterTypeSuiAddress_lift(try! rustCall() {
     uniffi_walletkit_fn_method_suiclient_address(
             self.uniffiCloneHandle(),$0
     )
@@ -937,22 +1380,38 @@ open func derivationPath() -> String?  {
 })
 }
     
-open func isActiveAddress(address: String) -> Bool  {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_walletkit_fn_method_suiclient_is_active_address(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
-    )
-})
+open func getBalance(coinType: String)async throws  -> [UInt64]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_suiclient_get_balance(
+                    self.uniffiCloneHandle(),
+                    FfiConverterString.lower(coinType)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt64.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
 }
     
-open func isValidAddress(address: String) -> Bool  {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_walletkit_fn_method_suiclient_is_valid_address(
-            self.uniffiCloneHandle(),
-        FfiConverterString.lower(address),$0
-    )
-})
+open func isActiveAddress(address: SuiAddress)async throws  -> Bool  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_suiclient_is_active_address(
+                    self.uniffiCloneHandle(),
+                    FfiConverterTypeSuiAddress_lower(address)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_i8,
+            completeFunc: ffi_walletkit_rust_future_complete_i8,
+            freeFunc: ffi_walletkit_rust_future_free_i8,
+            liftFunc: FfiConverterBool.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
 }
     
 
@@ -1415,6 +1874,31 @@ fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt64]
+
+    public static func write(_ value: [UInt64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt64.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt64] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt64]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt64.read(from: &buf))
+        }
+        return seq
+    }
+}
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_WAKE: Int8 = 1
 
@@ -1479,7 +1963,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_address() != 46143) {
+    if (uniffi_walletkit_checksum_method_alloyclient_address() != 49827) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_alloyclient_chain_id() != 47942) {
@@ -1488,10 +1972,28 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_alloyclient_derivation_path() != 18955) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_is_active_address() != 39577) {
+    if (uniffi_walletkit_checksum_method_alloyclient_get_balance() != 42349) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_is_valid_address() != 37574) {
+    if (uniffi_walletkit_checksum_method_alloyclient_is_active_address() != 25474) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_alloyclient_rpc_url() != 38683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_erc20_address() != 36926) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_erc20_balance_of() != 15610) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_erc20_decimals() != 5288) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_erc20_symbol() != 13026) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_ethereumaddress_to_string() != 25497) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_mnemonic_entropy() != 64336) {
@@ -1500,16 +2002,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_mnemonic_seed_phrase() != 54900) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_suiclient_address() != 50566) {
+    if (uniffi_walletkit_checksum_method_suiaddress_to_string() != 14688) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_suiclient_address() != 24175) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_suiclient_derivation_path() != 3240) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_suiclient_is_active_address() != 54542) {
+    if (uniffi_walletkit_checksum_method_suiclient_get_balance() != 27501) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_suiclient_is_valid_address() != 37941) {
+    if (uniffi_walletkit_checksum_method_suiclient_is_active_address() != 35745) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_trezor_device_id() != 60832) {
@@ -1524,13 +2029,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_trezor_vendor() != 39366) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_constructor_alloyclient_new() != 34606) {
+    if (uniffi_walletkit_checksum_constructor_alloyclient_new() != 52755) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_constructor_alloyclient_new_trezor() != 7789) {
+    if (uniffi_walletkit_checksum_constructor_alloyclient_new_trezor() != 27002) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_constructor_alloyclient_new_watch_only() != 54464) {
+    if (uniffi_walletkit_checksum_constructor_alloyclient_new_watch_only() != 58495) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_constructor_erc20_new() != 65473) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_constructor_ethereumaddress_new() != 62343) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_constructor_mnemonic_from_entropy() != 50546) {
@@ -1539,10 +2050,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_constructor_mnemonic_from_seed_phrase() != 17425) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_walletkit_checksum_constructor_suiaddress_new() != 63800) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_walletkit_checksum_constructor_suiclient_new() != 16452) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_constructor_suiclient_new_watch_only() != 19123) {
+    if (uniffi_walletkit_checksum_constructor_suiclient_new_watch_only() != 3433) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_constructor_trezor_new() != 62777) {

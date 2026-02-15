@@ -1,6 +1,13 @@
 namespace WalletKit {
 };
 
+interface EthereumAddress {
+    [Throws=Error]
+    constructor(string string);
+
+    string to_string();
+};
+
 [Error]
 interface Error {
     AlloyError(string description);
@@ -12,20 +19,43 @@ interface Error {
 
 interface AlloyClient {
     [Throws=Error]
-    constructor(u64 chain_id, u64 account_index, sequence<u8> private_key, string? password);
+    constructor(u64 chain_id, u64 account_index, sequence<u8> private_key, string? password, string rpc_url);
 
     [Async, Throws=Error, Name=new_trezor]
-    constructor(u64 chain_id, u64 account_index, string device_id);
+    constructor(u64 chain_id, u64 account_index, string device_id, string rpc_url);
 
     [Throws=Error, Name=new_watch_only]
-    constructor(u64 chain_id, string address);
+    constructor(u64 chain_id, EthereumAddress address, string rpc_url);
 
-    string address();
+    EthereumAddress address();
+
     u64 chain_id();
+
     string? derivation_path();
 
-    boolean is_active_address(string address);
-    boolean is_valid_address(string address);
+    [Async, Throws=Error]
+    sequence<u64> get_balance();
+
+    [Async, Throws=Error]
+    boolean is_active_address(EthereumAddress address);
+
+    string rpc_url();
+};
+
+interface ERC20 {
+    [Throws=Error]
+    constructor(EthereumAddress address, string rpc_url);
+
+    EthereumAddress address();
+
+    [Async, Throws=Error]
+    u8 decimals();
+
+    [Async, Throws=Error]
+    string symbol();
+
+    [Async, Throws=Error]
+    sequence<u64> balance_of(EthereumAddress owner);
 };
 
 interface Mnemonic {
@@ -49,18 +79,28 @@ interface Trezor {
     string vendor();
 };
 
+interface SuiAddress {
+    [Throws=Error]
+    constructor(string string);
+
+    string to_string();
+};
+
 interface SuiClient {
     [Throws=Error]
     constructor(u64 account_index, SignatureScheme key_scheme, sequence<u8> private_key, string? password, string rpc_url);
 
     [Throws=Error, Name=new_watch_only]
-    constructor(string address, string rpc_url);
+    constructor(SuiAddress address, string rpc_url);
 
-    string address();
+    SuiAddress address();
     string? derivation_path();
 
-    boolean is_active_address(string address);
-    boolean is_valid_address(string address);
+    [Async, Throws=Error]
+    boolean is_active_address(SuiAddress address);
+
+    [Async, Throws=Error]
+    sequence<u64> get_balance(string coin_type);
 };
 
 enum SignatureScheme {

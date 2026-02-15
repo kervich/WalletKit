@@ -1,7 +1,5 @@
 // use trezor_client::client::Trezor;
 
-use alloy::serde::quantity::vec;
-
 use crate::error::Error;
 
 pub struct Trezor {

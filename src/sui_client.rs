@@ -1,13 +1,13 @@
-use std::str::FromStr;
-
-use sui_types::base_types::SuiAddress;
-use sui_types::crypto::SuiKeyPair;
 use bip32::DerivationPath;
+use std::sync::Arc;
+use sui_sdk::SuiClientBuilder;
+use sui_types::crypto::SuiKeyPair;
 
 use crate::{
-    BlockchainClient,
     error::Error,
+    runtime::Runtime,
     signature_scheme::SignatureScheme,
+    sui_address::SuiAddress,
 };
 
 pub struct SuiClient {
@@ -37,35 +37,47 @@ impl SuiClient {
             )
             .map_err(|e| Error::SuiError { description: e.to_string() })?;
 
-        Ok(Self { address, key_pair: Some(key_pair), derivation_path: Some(derivation_path), rpc_url })
+        Ok(Self { address: address.into(), key_pair: Some(key_pair), derivation_path: Some(derivation_path), rpc_url })
     }
 
     pub fn new_watch_only(
-        address: String,
+        address: Arc<SuiAddress>,
         rpc_url: String
     ) -> Result<Self, Error> {
-        let sui_address = SuiAddress::from_str(&address)
-            .map_err(|e| Error::SuiError { description: e.to_string() })?;
-
-        Ok(Self { address: sui_address, key_pair: None, derivation_path: None, rpc_url })
-    }
-}
-
-impl BlockchainClient for SuiClient {
-    fn address(&self) -> String {
-        self.address.to_string()
+        Ok(Self { address: (*address).clone(), key_pair: None, derivation_path: None, rpc_url })
     }
 
-    fn derivation_path(&self) -> Option<String> {
+    pub fn address(&self) -> Arc<SuiAddress> {
+        self.address.clone().into()
+    }
+
+    pub fn derivation_path(&self) -> Option<String> {
         self.derivation_path.as_ref().map(|dp| dp.to_string())
     }
 
-    fn is_active_address(&self, address: String) -> bool {
-        false // TODO: Implement this method by checking if the address has any transactions or balance on the Sui blockchain.
+    pub async fn get_balance(&self, coin_type: String) -> Result<Vec<u64>, Error> {
+        let runtime = Runtime::new();
+
+        let balance = runtime.runtime.block_on(async {
+            let client = SuiClientBuilder::default()
+                .build(self.rpc_url.clone())
+                .await
+                .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+            let coin_type: Option<String> = Some(coin_type);
+
+            client.coin_read_api()
+                .get_balance(self.address.clone().into(), coin_type)
+                .await
+                .map_err(|e| Error::SuiError { description: e.to_string() })
+        })?;
+
+        let amount = alloy_primitives::U256::from(balance.total_balance);
+        Ok(amount.as_limbs().to_vec())
     }
 
-    fn is_valid_address(&self, address: String) -> bool {
-        SuiAddress::from_str(&address).is_ok()
+    pub async fn is_active_address(&self, address: Arc<SuiAddress>) -> Result<bool, Error> {
+        Ok(false) // TODO: Implement this method by checking if the address has any transactions or balance on the Sui blockchain.
     }
 }
 
