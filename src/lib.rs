@@ -5,6 +5,7 @@ mod alloy_client;
 mod sui_client;
 mod mnemonic;
 mod signature_scheme;
+mod trezor;
 
 use crate::{
     error::Error,
@@ -12,6 +13,7 @@ use crate::{
     mnemonic::Mnemonic,
     signature_scheme::SignatureScheme,
     sui_client::SuiClient,
+    trezor::Trezor
 };
 
 pub trait BlockchainClient: Send + Sync {

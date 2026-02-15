@@ -24,6 +24,7 @@ bip39 = "2.2.2"
 hex = "0.4.3"
 sui_keys = { git = "https://github.com/mystenlabs/sui", package = "sui-keys" }
 sui_types = { git = "https://github.com/mystenlabs/sui", package = "sui-types" }
+trezor-client = "0.1.5"
 uniffi = "0.30"
 
 [build-dependencies]

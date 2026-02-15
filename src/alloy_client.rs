@@ -1,11 +1,8 @@
+use alloy::{network::TxSigner, signers::local::{
+    MnemonicBuilder, PrivateKeySigner, coins_bip39::{English, Entropy, Mnemonic}
+}};
+use alloy::signers::trezor::{HDPath, TrezorSigner};
 use std::str::FromStr;
-
-use alloy::signers::local::coins_bip39::{
-    English, Entropy, Mnemonic, mnemonic
-};
-
-use alloy::signers::local::{MnemonicBuilder, PrivateKeySigner};
-use alloy::signers::trezor::TrezorSigner;
 
 use crate::{BlockchainClient, error::Error};
 
@@ -60,7 +57,7 @@ impl AlloyClient {
     }
 
     pub async fn new_trezor(chain_id: u64, account_index: u64, device_id: String) -> Result<Self, Error> {
-        let derivation = alloy::signers::trezor::HDPath::TrezorLive(account_index.try_into().unwrap());
+        let derivation = HDPath::TrezorLive(account_index.try_into().unwrap());
 
         let signer = TrezorSigner::new(derivation, Some(chain_id))
             .await
@@ -102,7 +99,7 @@ impl BlockchainClient for AlloyClient {
     fn address(&self) -> String {
         match self.kind {
             SignerKind::Local => self.local_signer.as_ref().unwrap().address().to_string(),
-            SignerKind::Trezor => unimplemented!(),
+            SignerKind::Trezor => self.trezor_signer.as_ref().unwrap().address().to_string(),
             SignerKind::WatchOnly => self.watch_address.as_ref().unwrap().to_string(),
         }
     }

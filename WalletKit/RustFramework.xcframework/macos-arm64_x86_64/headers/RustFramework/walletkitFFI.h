@@ -363,6 +363,42 @@ int8_t uniffi_walletkit_fn_method_suiclient_is_active_address(uint64_t ptr, Rust
 int8_t uniffi_walletkit_fn_method_suiclient_is_valid_address(uint64_t ptr, RustBuffer address, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_TREZOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_TREZOR
+uint64_t uniffi_walletkit_fn_clone_trezor(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_TREZOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_TREZOR
+void uniffi_walletkit_fn_free_trezor(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_TREZOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_TREZOR_NEW
+uint64_t uniffi_walletkit_fn_constructor_trezor_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_DEVICE_ID
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_DEVICE_ID
+RustBuffer uniffi_walletkit_fn_method_trezor_device_id(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_MODEL
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_MODEL
+RustBuffer uniffi_walletkit_fn_method_trezor_model(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_REVISION
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_REVISION
+RustBuffer uniffi_walletkit_fn_method_trezor_revision(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_VENDOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_TREZOR_VENDOR
+RustBuffer uniffi_walletkit_fn_method_trezor_vendor(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_FFI_WALLETKIT_RUSTBUFFER_ALLOC
 #define UNIFFI_FFIDEF_FFI_WALLETKIT_RUSTBUFFER_ALLOC
 RustBuffer ffi_walletkit_rustbuffer_alloc(uint64_t size, RustCallStatus *_Nonnull out_status
@@ -689,6 +725,30 @@ uint16_t uniffi_walletkit_checksum_method_suiclient_is_valid_address(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_DEVICE_ID
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_DEVICE_ID
+uint16_t uniffi_walletkit_checksum_method_trezor_device_id(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_MODEL
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_MODEL
+uint16_t uniffi_walletkit_checksum_method_trezor_model(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_REVISION
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_REVISION
+uint16_t uniffi_walletkit_checksum_method_trezor_revision(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_VENDOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_TREZOR_VENDOR
+uint16_t uniffi_walletkit_checksum_method_trezor_vendor(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW
 uint16_t uniffi_walletkit_checksum_constructor_alloyclient_new(void
@@ -728,6 +788,12 @@ uint16_t uniffi_walletkit_checksum_constructor_suiclient_new(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
 uint16_t uniffi_walletkit_checksum_constructor_suiclient_new_watch_only(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_TREZOR_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_TREZOR_NEW
+uint16_t uniffi_walletkit_checksum_constructor_trezor_new(void
     
 );
 #endif

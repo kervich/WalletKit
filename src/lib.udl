@@ -7,6 +7,7 @@ interface Error {
     MnemonicError(string description);
     NotImplemented();
     SuiError(string description);
+    TrezorError(string description);
 };
 
 interface AlloyClient {
@@ -36,6 +37,16 @@ interface Mnemonic {
 
     string seed_phrase();
     sequence<u8> entropy();
+};
+
+interface Trezor {
+    [Async, Throws=Error]
+    constructor();
+
+    string device_id();
+    string model();
+    string revision();
+    string vendor();
 };
 
 interface SuiClient {

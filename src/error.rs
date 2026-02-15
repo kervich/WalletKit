@@ -6,6 +6,7 @@ pub enum Error {
     MnemonicError { description: String },
     NotImplemented,
     SuiError { description: String },
+    TrezorError { description: String }
 }
 
 impl Error {
@@ -15,6 +16,7 @@ impl Error {
             Error::MnemonicError { description } => description.clone(),
             Error::NotImplemented => "Not implemented".to_string(),
             Error::SuiError { description } => description.clone(),
+            Error::TrezorError { description } => description.clone()
         }
     }
 }

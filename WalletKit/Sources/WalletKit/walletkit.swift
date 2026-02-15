@@ -1003,6 +1003,163 @@ public func FfiConverterTypeSuiClient_lower(_ value: SuiClient) -> UInt64 {
 
 
 
+
+
+public protocol TrezorProtocol: AnyObject, Sendable {
+    
+    func deviceId()  -> String
+    
+    func model()  -> String
+    
+    func revision()  -> String
+    
+    func vendor()  -> String
+    
+}
+open class Trezor: TrezorProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_walletkit_fn_clone_trezor(self.handle, $0) }
+    }
+public convenience init()async throws  {
+    let handle =
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_constructor_trezor_new(
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_u64,
+            completeFunc: ffi_walletkit_rust_future_complete_u64,
+            freeFunc: ffi_walletkit_rust_future_free_u64,
+            liftFunc: FfiConverterTypeTrezor_lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+        
+        .uniffiCloneHandle()
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        try! rustCall { uniffi_walletkit_fn_free_trezor(handle, $0) }
+    }
+
+    
+
+    
+open func deviceId() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_trezor_device_id(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func model() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_trezor_model(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func revision() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_trezor_revision(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func vendor() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_walletkit_fn_method_trezor_vendor(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTrezor: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = Trezor
+
+    public static func lift(_ handle: UInt64) throws -> Trezor {
+        return Trezor(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: Trezor) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Trezor {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: Trezor, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrezor_lift(_ handle: UInt64) throws -> Trezor {
+    return try FfiConverterTypeTrezor.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrezor_lower(_ value: Trezor) -> UInt64 {
+    return FfiConverterTypeTrezor.lower(value)
+}
+
+
+
+
 public enum Error: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
@@ -1013,6 +1170,8 @@ public enum Error: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
     )
     case NotImplemented
     case SuiError(description: String
+    )
+    case TrezorError(description: String
     )
 
     
@@ -1051,6 +1210,9 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
         case 4: return .SuiError(
             description: try FfiConverterString.read(from: &buf)
             )
+        case 5: return .TrezorError(
+            description: try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1079,6 +1241,11 @@ public struct FfiConverterTypeError: FfiConverterRustBuffer {
         
         case let .SuiError(description):
             writeInt(&buf, Int32(4))
+            FfiConverterString.write(description, into: &buf)
+            
+        
+        case let .TrezorError(description):
+            writeInt(&buf, Int32(5))
             FfiConverterString.write(description, into: &buf)
             
         }
@@ -1345,6 +1512,18 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_suiclient_is_valid_address() != 37941) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_walletkit_checksum_method_trezor_device_id() != 60832) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_trezor_model() != 41192) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_trezor_revision() != 15083) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_trezor_vendor() != 39366) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_walletkit_checksum_constructor_alloyclient_new() != 34606) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1364,6 +1543,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_constructor_suiclient_new_watch_only() != 19123) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_constructor_trezor_new() != 62777) {
         return InitializationResult.apiChecksumMismatch
     }
 
