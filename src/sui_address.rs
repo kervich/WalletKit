@@ -8,7 +8,7 @@ pub struct SuiAddress {
 impl SuiAddress {
     pub fn new(address: String) -> Result<Self, Error> {
         let address = address.parse::<SDKAddress>()
-            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+            .map_err(|e| Error::InvalidAddress { description: e.to_string() })?;
         Ok(Self { address })
     }
 
@@ -29,8 +29,8 @@ impl From<SDKAddress> for SuiAddress {
     }
 }
 
-impl From<SuiAddress> for SDKAddress {
-    fn from(sui_address: SuiAddress) -> Self {
-        sui_address.address
+impl Into<SDKAddress> for SuiAddress {
+    fn into(self) -> SDKAddress {
+        self.address
     }
 }

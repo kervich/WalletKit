@@ -8,7 +8,7 @@ pub struct EthereumAddress {
 impl EthereumAddress {
     pub fn new(address: String) -> Result<Self, Error> {
         let address = address.parse::<Address>()
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+            .map_err(|e| Error::InvalidAddress { description: e.to_string() })?;
         Ok(Self { address })
     }
 
@@ -26,6 +26,12 @@ impl Clone for EthereumAddress {
 impl From<Address> for EthereumAddress {
     fn from(address: Address) -> Self {
         Self { address }
+    }
+}
+
+impl std::fmt::Display for EthereumAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.address)
     }
 }
 

@@ -1,93 +1,126 @@
-use bip32::DerivationPath;
 use std::sync::Arc;
-use sui_sdk::SuiClientBuilder;
-use sui_types::crypto::SuiKeyPair;
+use sui_sdk::{SuiClientBuilder};
 
 use crate::{
     error::Error,
-    runtime::Runtime,
-    signature_scheme::SignatureScheme,
+    make_runtime,
     sui_address::SuiAddress,
+    sui_coin_metadata::SuiCoinMetadata
 };
 
 pub struct SuiClient {
     address: SuiAddress,
-    derivation_path: Option<DerivationPath>,
-    key_pair: Option<SuiKeyPair>,
-    rpc_url: String
+    client: sui_sdk::SuiClient,
+    rpc_url: String,
+    runtime: tokio::runtime::Runtime
+}
+
+pub struct SuiBalance {
+    pub coin_type: String,
+    pub amount: String,
 }
 
 impl SuiClient {
-    pub fn new(
-        account_index: u64,
-        key_scheme: SignatureScheme,
-        private_key: Vec<u8>,
-        password: Option<String>,
-        rpc_url: String
-    ) -> Result<Self, Error> {
-        let derivation_path = SuiClient::make_derivation_path(account_index, &key_scheme)?
-            .parse::<DerivationPath>()
-            .map_err(|e| Error::SuiError { description: e.to_string() })?;
-
-        let (address, key_pair) =
-            sui_keys::key_derive::derive_key_pair_from_path(
-                &private_key,
-                Some(derivation_path.clone()),
-                &key_scheme.into(),
-            )
-            .map_err(|e| Error::SuiError { description: e.to_string() })?;
-
-        Ok(Self { address: address.into(), key_pair: Some(key_pair), derivation_path: Some(derivation_path), rpc_url })
-    }
-
-    pub fn new_watch_only(
+    pub async fn new(
         address: Arc<SuiAddress>,
         rpc_url: String
     ) -> Result<Self, Error> {
-        Ok(Self { address: (*address).clone(), key_pair: None, derivation_path: None, rpc_url })
+        let runtime = make_runtime();
+        let rpc_url_clone = rpc_url.clone();
+
+        let client = runtime
+            .spawn(async move { SuiClientBuilder::default().build(rpc_url_clone).await })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        Ok(Self {
+            address: (*address).clone(),
+            client,
+            rpc_url,
+            runtime: runtime
+        })
     }
 
     pub fn address(&self) -> Arc<SuiAddress> {
         self.address.clone().into()
     }
 
-    pub fn derivation_path(&self) -> Option<String> {
-        self.derivation_path.as_ref().map(|dp| dp.to_string())
+    pub async fn get_all_balances(
+        &self,
+        owner: Arc<SuiAddress>
+    ) -> Result<Vec<SuiBalance>, Error> {
+        let owner = (*owner).clone().into();
+        let sui_client = self.client.clone();
+
+        let balances = self.runtime
+            .spawn(async move {
+                sui_client
+                    .coin_read_api()
+                    .get_all_balances(owner)
+                    .await
+            })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        let result = balances.into_iter()
+            .map(|balance| {
+                SuiBalance {
+                    coin_type: balance.coin_type,
+                    amount: format!("{}", balance.total_balance),
+                }
+            })
+            .collect();
+
+        Ok(result)
     }
 
-    pub async fn get_balance(&self, coin_type: String) -> Result<Vec<u64>, Error> {
-        let runtime = Runtime::new();
+    pub async fn get_balance(
+        &self,
+        coin_type: Option<String>
+    ) -> Result<String, Error> {
+        let client = self.client.clone();
+        let coin_type = coin_type.clone();
+        let owner = (*self.address()).clone().into();
 
-        let balance = runtime.runtime.block_on(async {
+        let balance = self.runtime
+            .spawn(async move { client.coin_read_api().get_balance(owner, coin_type).await })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        Ok(format!("{}", balance.total_balance))
+    }
+
+    pub async fn get_coin_metadata(
+        &self,
+        coin_type: String
+    ) -> Result<Option<SuiCoinMetadata>, Error> {
+        let client = self.client.clone();
+        let coin_type = coin_type.clone();
+
+        let metadata = self.runtime
+            .spawn(async move { client.coin_read_api().get_coin_metadata(coin_type).await })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        Ok(metadata.map(|meta| meta.into()))
+    }
+
+    pub async fn is_active_address(
+        &self,
+        address: Arc<SuiAddress>
+    ) -> Result<bool, Error> {
+        self.runtime.block_on(async {
             let client = SuiClientBuilder::default()
                 .build(self.rpc_url.clone())
                 .await
                 .map_err(|e| Error::SuiError { description: e.to_string() })?;
 
-            let coin_type: Option<String> = Some(coin_type);
-
-            client.coin_read_api()
-                .get_balance(self.address.clone().into(), coin_type)
+            let balance = client.coin_read_api()
+                .get_balance((*address).clone().into(), None)
                 .await
-                .map_err(|e| Error::SuiError { description: e.to_string() })
-        })?;
+                .map_err(|e| Error::SuiError { description: e.to_string() })?;
 
-        let amount = alloy_primitives::U256::from(balance.total_balance);
-        Ok(amount.as_limbs().to_vec())
-    }
-
-    pub async fn is_active_address(&self, address: Arc<SuiAddress>) -> Result<bool, Error> {
-        Ok(false) // TODO: Implement this method by checking if the address has any transactions or balance on the Sui blockchain.
-    }
-}
-
-impl SuiClient {
-    fn make_derivation_path(account_index: u64, key_scheme: &SignatureScheme) -> Result<String, Error> {
-        match key_scheme {
-            SignatureScheme::ED25519 => Ok(format!("m/44'/784'/{account_index}'/0'/0'")),
-            SignatureScheme::Secp256k1 => Ok(format!("m/44'/784'/{account_index}'/0'/0'")),
-            SignatureScheme::Secp256r1 => Ok(format!("m/44'/784'/{account_index}'/0'/0'")),
-            _ => Err(Error::NotImplemented),
-        }
+            Ok(balance.total_balance > 0)
+        })
     }
 }

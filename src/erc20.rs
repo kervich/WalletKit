@@ -1,9 +1,9 @@
 use alloy::{
     network::Ethereum,
-    providers::RootProvider,
-    // rpc,
+    primitives::U256,
+    providers::{RootProvider},
     sol,
-    transports::http::reqwest::Url
+    sol_types::SolInterface
 };
 
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 use crate::{
     error::Error,
     ethereum_address::EthereumAddress,
-    runtime::Runtime
+    make_runtime
 };
 
 sol! {
@@ -23,60 +23,125 @@ sol! {
         function decimals() external view returns (uint8);
         function symbol() external view returns (string);
         // function totalSupply() external view returns (uint256);
-        // function transfer(address to, uint256 value) external returns (bool);
-        // function transferFrom(address from, address to, uint256 value) external returns (bool);
+        function transfer(address to, uint256 value) external returns (bool);
+        function transferFrom(address from, address to, uint256 value) external returns (bool);
     }
 }
 
 pub struct ERC20 {
-    address: EthereumAddress,
-    rpc_url: Url
+    contract_address: EthereumAddress,
+    own_address: EthereumAddress,
+    provider: RootProvider<Ethereum>,
+    runtime: tokio::runtime::Runtime
 }
 
 impl ERC20 {
-    pub fn new(address: Arc<EthereumAddress>, rpc_url: String) -> Result<Self, Error> {
-        let rpc_url = rpc_url.parse::<Url>()
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        Ok(Self { address: (*address).clone(), rpc_url })
+    pub fn new(
+        contract_address: EthereumAddress,
+        own_address: EthereumAddress,
+        provider: RootProvider<Ethereum>,
+    ) -> Self {
+        Self { contract_address, own_address, provider, runtime: make_runtime() }
     }
 
-    pub fn address(&self) -> Arc<EthereumAddress> {
-        Arc::new(self.address.clone())
+    pub fn contract_address(&self) -> Arc<EthereumAddress> {
+        Arc::new(self.contract_address.clone())
     }
 
-    pub async fn balance_of(&self, owner: Arc<EthereumAddress>) -> Result<Vec<u64>, Error> {
-        let provider = RootProvider::<Ethereum>::new_http(self.rpc_url.clone());
-        let contract = IERC20::new(self.address.clone().into(), provider.clone());
+    pub async fn balance_of(
+        &self,
+        owner: Arc<EthereumAddress>
+    ) -> Result<String, Error> {
+        let contract = IERC20::new(self.contract_address.clone().into(), self.provider.clone());
 
-        let runtime = Runtime::new();
-        let balance = runtime.runtime.block_on(async {
-            contract.balanceOf(owner.as_ref().into()).call().await
+        let balance = self.runtime.block_on(async {
+            contract.balanceOf(owner.as_ref().into())
+                .call()
+                .await
                 .map_err(|e| Error::AlloyError { description: e.to_string() })
         })?;
 
-        Ok(balance.as_limbs().to_vec())
+        Ok(format!("{}", balance))
     }
 
     pub async fn decimals(&self) -> Result<u8, Error> {
-        let provider = RootProvider::<Ethereum>::new_http(self.rpc_url.clone());
-        let contract = IERC20::new(self.address.clone().into(), provider.clone());
-        let runtime = Runtime::new();
+        let contract = IERC20::new(self.contract_address.clone().into(), self.provider.clone());
 
-        runtime.runtime.block_on(async {
+        let decimals = self.runtime.block_on(async {
             contract.decimals().call().await
-            .map_err(|e| Error::AlloyError { description: e.to_string() })
-        })
+                .map_err(|e| Error::AlloyError { description: e.to_string() })
+        })?;
+
+        Ok(decimals)
+    }
+
+    pub fn make_transfer_tx(
+        &self,
+        recipient: Arc<EthereumAddress>,
+        amount: String
+    ) -> Result<Vec<u8>, Error> {
+        println!("Making transfer tx: self={}, recipient={}, amount={}", self.own_address, recipient, amount);
+
+        let amount = amount.parse::<U256>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let call = IERC20::IERC20Calls::transfer(IERC20::transferCall {
+            to: recipient.as_ref().into(),
+            value: amount,
+        });
+
+        let tx_request = alloy::rpc::types::eth::TransactionRequest::default()
+            .from(self.own_address.clone().into())
+            .to(self.contract_address.clone().into())
+            .input(call.abi_encode().into());
+
+        let data = serde_json::to_string(&tx_request)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        Ok(data.into_bytes())
+    }
+
+    pub fn make_transfer_from_tx(
+        &self,
+        sender: Arc<EthereumAddress>,
+        recipient: Arc<EthereumAddress>,
+        amount: String
+    ) -> Result<Vec<u8>, Error> {
+        println!(
+            "Making transfer from tx: self={}, sender={}, recipient={}, amount={}",
+            self.own_address.clone(),
+            sender,
+            recipient,
+            amount
+        );
+
+        let amount = amount.parse::<U256>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let call = IERC20::IERC20Calls::transferFrom(IERC20::transferFromCall {
+            from: sender.as_ref().into(),
+            to: recipient.as_ref().into(),
+            value: amount,
+        });
+
+        let tx_request = alloy::rpc::types::eth::TransactionRequest::default()
+            .from(self.own_address.clone().into())
+            .input(call.abi_encode().into());
+
+        let data = serde_json::to_string(&tx_request)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        Ok(data.into_bytes())
     }
 
     pub async fn symbol(&self) -> Result<String, Error> {
-        let provider = RootProvider::<Ethereum>::new_http(self.rpc_url.clone());
-        let contract = IERC20::new(self.address.clone().into(), provider.clone());
-        let runtime = Runtime::new();
+        let contract = IERC20::new(self.contract_address.clone().into(), self.provider.clone());
 
-        runtime.runtime.block_on(async {
+        let symbol = self.runtime.block_on(async {
             contract.symbol().call().await
-            .map_err(|e| Error::AlloyError { description: e.to_string() })
-        })
+                .map_err(|e| Error::AlloyError { description: e.to_string() })
+        })?;
+
+        Ok(symbol)
     }
 }

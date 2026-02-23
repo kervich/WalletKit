@@ -255,17 +255,7 @@ void uniffi_walletkit_fn_free_alloyclient(uint64_t handle, RustCallStatus *_Nonn
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW
-uint64_t uniffi_walletkit_fn_constructor_alloyclient_new(uint64_t chain_id, uint64_t account_index, RustBuffer private_key, RustBuffer password, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW_TREZOR
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW_TREZOR
-uint64_t uniffi_walletkit_fn_constructor_alloyclient_new_trezor(uint64_t chain_id, uint64_t account_index, RustBuffer device_id, RustBuffer rpc_url
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW_WATCH_ONLY
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYCLIENT_NEW_WATCH_ONLY
-uint64_t uniffi_walletkit_fn_constructor_alloyclient_new_watch_only(uint64_t chain_id, uint64_t address, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
+uint64_t uniffi_walletkit_fn_constructor_alloyclient_new(uint64_t address, uint64_t chain_id, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ADDRESS
@@ -278,9 +268,19 @@ uint64_t uniffi_walletkit_fn_method_alloyclient_address(uint64_t ptr, RustCallSt
 uint64_t uniffi_walletkit_fn_method_alloyclient_chain_id(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_DERIVATION_PATH
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_DERIVATION_PATH
-RustBuffer uniffi_walletkit_fn_method_alloyclient_derivation_path(uint64_t ptr, RustCallStatus *_Nonnull out_status
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ERC20
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ERC20
+uint64_t uniffi_walletkit_fn_method_alloyclient_erc20(uint64_t ptr, uint64_t contract_address, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ESTIMATE_FEES
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ESTIMATE_FEES
+uint64_t uniffi_walletkit_fn_method_alloyclient_estimate_fees(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ESTIMATE_GAS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_ESTIMATE_GAS
+uint64_t uniffi_walletkit_fn_method_alloyclient_estimate_gas(uint64_t ptr, RustBuffer tx
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_GET_BALANCE
@@ -288,14 +288,54 @@ RustBuffer uniffi_walletkit_fn_method_alloyclient_derivation_path(uint64_t ptr, 
 uint64_t uniffi_walletkit_fn_method_alloyclient_get_balance(uint64_t ptr
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_IS_ACTIVE_ADDRESS
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_IS_ACTIVE_ADDRESS
-uint64_t uniffi_walletkit_fn_method_alloyclient_is_active_address(uint64_t ptr, uint64_t address
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_GET_NONCE
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_GET_NONCE
+uint64_t uniffi_walletkit_fn_method_alloyclient_get_nonce(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_MAKE_TRANSFER_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_MAKE_TRANSFER_TX
+RustBuffer uniffi_walletkit_fn_method_alloyclient_make_transfer_tx(uint64_t ptr, uint64_t to, RustBuffer amount, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_RPC_URL
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_RPC_URL
 RustBuffer uniffi_walletkit_fn_method_alloyclient_rpc_url(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_SEND_TRANSACTION
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYCLIENT_SEND_TRANSACTION
+uint64_t uniffi_walletkit_fn_method_alloyclient_send_transaction(uint64_t ptr, RustBuffer tx, uint64_t wallet, uint64_t gas_limit, RustBuffer fee_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_ALLOYWALLET
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_ALLOYWALLET
+uint64_t uniffi_walletkit_fn_clone_alloywallet(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_ALLOYWALLET
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_ALLOYWALLET
+void uniffi_walletkit_fn_free_alloywallet(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYWALLET_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYWALLET_NEW
+uint64_t uniffi_walletkit_fn_constructor_alloywallet_new(uint64_t account_index, RustBuffer private_key, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYWALLET_NEW_TREZOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ALLOYWALLET_NEW_TREZOR
+uint64_t uniffi_walletkit_fn_constructor_alloywallet_new_trezor(uint64_t account_index, RustBuffer chain_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYWALLET_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYWALLET_ADDRESS
+uint64_t uniffi_walletkit_fn_method_alloywallet_address(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYWALLET_DERIVATION_PATH
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ALLOYWALLET_DERIVATION_PATH
+RustBuffer uniffi_walletkit_fn_method_alloywallet_derivation_path(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_ERC20
@@ -308,24 +348,29 @@ uint64_t uniffi_walletkit_fn_clone_erc20(uint64_t handle, RustCallStatus *_Nonnu
 void uniffi_walletkit_fn_free_erc20(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ERC20_NEW
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_ERC20_NEW
-uint64_t uniffi_walletkit_fn_constructor_erc20_new(uint64_t address, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_ADDRESS
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_ADDRESS
-uint64_t uniffi_walletkit_fn_method_erc20_address(uint64_t ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_BALANCE_OF
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_BALANCE_OF
 uint64_t uniffi_walletkit_fn_method_erc20_balance_of(uint64_t ptr, uint64_t owner
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_CONTRACT_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_CONTRACT_ADDRESS
+uint64_t uniffi_walletkit_fn_method_erc20_contract_address(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_DECIMALS
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_DECIMALS
 uint64_t uniffi_walletkit_fn_method_erc20_decimals(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_MAKE_TRANSFER_FROM_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_MAKE_TRANSFER_FROM_TX
+RustBuffer uniffi_walletkit_fn_method_erc20_make_transfer_from_tx(uint64_t ptr, uint64_t from, uint64_t to, RustBuffer amount, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_MAKE_TRANSFER_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_MAKE_TRANSFER_TX
+RustBuffer uniffi_walletkit_fn_method_erc20_make_transfer_tx(uint64_t ptr, uint64_t to, RustBuffer amount, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_ERC20_SYMBOL
@@ -415,12 +460,7 @@ void uniffi_walletkit_fn_free_suiclient(uint64_t handle, RustCallStatus *_Nonnul
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUICLIENT_NEW
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUICLIENT_NEW
-uint64_t uniffi_walletkit_fn_constructor_suiclient_new(uint64_t account_index, RustBuffer key_scheme, RustBuffer private_key, RustBuffer password, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
-uint64_t uniffi_walletkit_fn_constructor_suiclient_new_watch_only(uint64_t address, RustBuffer rpc_url, RustCallStatus *_Nonnull out_status
+uint64_t uniffi_walletkit_fn_constructor_suiclient_new(uint64_t address, RustBuffer rpc_url
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_ADDRESS
@@ -428,9 +468,9 @@ uint64_t uniffi_walletkit_fn_constructor_suiclient_new_watch_only(uint64_t addre
 uint64_t uniffi_walletkit_fn_method_suiclient_address(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_DERIVATION_PATH
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_DERIVATION_PATH
-RustBuffer uniffi_walletkit_fn_method_suiclient_derivation_path(uint64_t ptr, RustCallStatus *_Nonnull out_status
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_GET_ALL_BALANCES
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_GET_ALL_BALANCES
+uint64_t uniffi_walletkit_fn_method_suiclient_get_all_balances(uint64_t ptr, uint64_t owner
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_GET_BALANCE
@@ -438,9 +478,39 @@ RustBuffer uniffi_walletkit_fn_method_suiclient_derivation_path(uint64_t ptr, Ru
 uint64_t uniffi_walletkit_fn_method_suiclient_get_balance(uint64_t ptr, RustBuffer coin_type
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_GET_COIN_METADATA
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_GET_COIN_METADATA
+uint64_t uniffi_walletkit_fn_method_suiclient_get_coin_metadata(uint64_t ptr, RustBuffer coin_type
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_IS_ACTIVE_ADDRESS
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUICLIENT_IS_ACTIVE_ADDRESS
 uint64_t uniffi_walletkit_fn_method_suiclient_is_active_address(uint64_t ptr, uint64_t address
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_SUIWALLET
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_SUIWALLET
+uint64_t uniffi_walletkit_fn_clone_suiwallet(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_SUIWALLET
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_FREE_SUIWALLET
+void uniffi_walletkit_fn_free_suiwallet(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUIWALLET_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CONSTRUCTOR_SUIWALLET_NEW
+uint64_t uniffi_walletkit_fn_constructor_suiwallet_new(uint64_t account_index, RustBuffer key_scheme, RustBuffer private_key, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUIWALLET_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUIWALLET_ADDRESS
+uint64_t uniffi_walletkit_fn_method_suiwallet_address(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUIWALLET_DERIVATION_PATH
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_METHOD_SUIWALLET_DERIVATION_PATH
+RustBuffer uniffi_walletkit_fn_method_suiwallet_derivation_path(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_FN_CLONE_TREZOR
@@ -751,9 +821,21 @@ uint16_t uniffi_walletkit_checksum_method_alloyclient_chain_id(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_DERIVATION_PATH
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_DERIVATION_PATH
-uint16_t uniffi_walletkit_checksum_method_alloyclient_derivation_path(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ERC20
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ERC20
+uint16_t uniffi_walletkit_checksum_method_alloyclient_erc20(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ESTIMATE_FEES
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ESTIMATE_FEES
+uint16_t uniffi_walletkit_checksum_method_alloyclient_estimate_fees(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ESTIMATE_GAS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_ESTIMATE_GAS
+uint16_t uniffi_walletkit_checksum_method_alloyclient_estimate_gas(void
     
 );
 #endif
@@ -763,9 +845,15 @@ uint16_t uniffi_walletkit_checksum_method_alloyclient_get_balance(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_IS_ACTIVE_ADDRESS
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_IS_ACTIVE_ADDRESS
-uint16_t uniffi_walletkit_checksum_method_alloyclient_is_active_address(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_GET_NONCE
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_GET_NONCE
+uint16_t uniffi_walletkit_checksum_method_alloyclient_get_nonce(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_MAKE_TRANSFER_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_MAKE_TRANSFER_TX
+uint16_t uniffi_walletkit_checksum_method_alloyclient_make_transfer_tx(void
     
 );
 #endif
@@ -775,9 +863,21 @@ uint16_t uniffi_walletkit_checksum_method_alloyclient_rpc_url(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_ADDRESS
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_ADDRESS
-uint16_t uniffi_walletkit_checksum_method_erc20_address(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_SEND_TRANSACTION
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYCLIENT_SEND_TRANSACTION
+uint16_t uniffi_walletkit_checksum_method_alloyclient_send_transaction(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYWALLET_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYWALLET_ADDRESS
+uint16_t uniffi_walletkit_checksum_method_alloywallet_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYWALLET_DERIVATION_PATH
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ALLOYWALLET_DERIVATION_PATH
+uint16_t uniffi_walletkit_checksum_method_alloywallet_derivation_path(void
     
 );
 #endif
@@ -787,9 +887,27 @@ uint16_t uniffi_walletkit_checksum_method_erc20_balance_of(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_CONTRACT_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_CONTRACT_ADDRESS
+uint16_t uniffi_walletkit_checksum_method_erc20_contract_address(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_DECIMALS
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_DECIMALS
 uint16_t uniffi_walletkit_checksum_method_erc20_decimals(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_MAKE_TRANSFER_FROM_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_MAKE_TRANSFER_FROM_TX
+uint16_t uniffi_walletkit_checksum_method_erc20_make_transfer_from_tx(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_MAKE_TRANSFER_TX
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_ERC20_MAKE_TRANSFER_TX
+uint16_t uniffi_walletkit_checksum_method_erc20_make_transfer_tx(void
     
 );
 #endif
@@ -829,9 +947,9 @@ uint16_t uniffi_walletkit_checksum_method_suiclient_address(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_DERIVATION_PATH
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_DERIVATION_PATH
-uint16_t uniffi_walletkit_checksum_method_suiclient_derivation_path(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_GET_ALL_BALANCES
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_GET_ALL_BALANCES
+uint16_t uniffi_walletkit_checksum_method_suiclient_get_all_balances(void
     
 );
 #endif
@@ -841,9 +959,27 @@ uint16_t uniffi_walletkit_checksum_method_suiclient_get_balance(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_GET_COIN_METADATA
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_GET_COIN_METADATA
+uint16_t uniffi_walletkit_checksum_method_suiclient_get_coin_metadata(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_IS_ACTIVE_ADDRESS
 #define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUICLIENT_IS_ACTIVE_ADDRESS
 uint16_t uniffi_walletkit_checksum_method_suiclient_is_active_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUIWALLET_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUIWALLET_ADDRESS
+uint16_t uniffi_walletkit_checksum_method_suiwallet_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUIWALLET_DERIVATION_PATH
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_METHOD_SUIWALLET_DERIVATION_PATH
+uint16_t uniffi_walletkit_checksum_method_suiwallet_derivation_path(void
     
 );
 #endif
@@ -877,21 +1013,15 @@ uint16_t uniffi_walletkit_checksum_constructor_alloyclient_new(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW_TREZOR
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW_TREZOR
-uint16_t uniffi_walletkit_checksum_constructor_alloyclient_new_trezor(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYWALLET_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYWALLET_NEW
+uint16_t uniffi_walletkit_checksum_constructor_alloywallet_new(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW_WATCH_ONLY
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYCLIENT_NEW_WATCH_ONLY
-uint16_t uniffi_walletkit_checksum_constructor_alloyclient_new_watch_only(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ERC20_NEW
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ERC20_NEW
-uint16_t uniffi_walletkit_checksum_constructor_erc20_new(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYWALLET_NEW_TREZOR
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_ALLOYWALLET_NEW_TREZOR
+uint16_t uniffi_walletkit_checksum_constructor_alloywallet_new_trezor(void
     
 );
 #endif
@@ -925,9 +1055,9 @@ uint16_t uniffi_walletkit_checksum_constructor_suiclient_new(void
     
 );
 #endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
-#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUICLIENT_NEW_WATCH_ONLY
-uint16_t uniffi_walletkit_checksum_constructor_suiclient_new_watch_only(void
+#ifndef UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUIWALLET_NEW
+#define UNIFFI_FFIDEF_UNIFFI_WALLETKIT_CHECKSUM_CONSTRUCTOR_SUIWALLET_NEW
+uint16_t uniffi_walletkit_checksum_constructor_suiwallet_new(void
     
 );
 #endif

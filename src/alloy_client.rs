@@ -1,171 +1,188 @@
 use alloy::{
-    network::{ Ethereum, TxSigner },
+    network::{ Ethereum, TransactionBuilder },
     primitives::Address,
     providers::{ Provider, RootProvider },
-    signers::{
-        local::{
-            MnemonicBuilder,
-            PrivateKeySigner,
-            coins_bip39::{ English, Entropy, Mnemonic }
-        },
-        trezor::{ HDPath, TrezorSigner },
-    },
+    rpc::types::TransactionRequest,
     transports::http::reqwest::Url
 };
 
 use std::sync::Arc;
 
 use crate::{
+    alloy_wallet::AlloyWallet,
+    erc20::ERC20,
     error::Error,
     ethereum_address::EthereumAddress,
-    runtime::Runtime
+    make_runtime
 };
 
-enum SignerKind {
-    Local,
-    Trezor,
-    WatchOnly
+pub struct FeeData {
+    pub max_fee_per_gas: String,
+    pub priority_fee_per_gas: String
 }
 
 pub struct AlloyClient {
+    address: Address,
     chain_id: u64,
-    derivation_path: Option<String>,
-    kind: SignerKind,
-    local_signer: Option<PrivateKeySigner>,
+    provider: RootProvider<Ethereum>,
     rpc_url: Url,
-    trezor_signer: Option<TrezorSigner>,
-    watch_address: Option<Address>
+    runtime: tokio::runtime::Runtime
 }
 
 impl AlloyClient {
     pub fn new(
-        chain_id: u64,
-        account_index: u64,
-        private_key: Vec<u8>,
-        password: Option<String>,
-        rpc_url: String
-    ) -> Result<Self, Error> {
-        let entropy = Entropy::try_from(private_key.as_slice())
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let mnemonic = Mnemonic::<English>::new_from_entropy(entropy);
-
-        let phrase = mnemonic.to_phrase();
-
-        let derivation_path = format!("m/44'/60'/0'/0/{account_index}");
-
-        let builder = MnemonicBuilder::<English>::default()
-            .phrase(phrase)
-            .password(password.unwrap_or_default())
-            .derivation_path(&derivation_path)
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let signer = builder.build()
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let rpc_url = rpc_url.parse()
-            .map_err(|_| Error::AlloyError { description: "Invalid URL".to_string() })?;
-
-        Ok(Self {
-            chain_id,
-            derivation_path: Some(derivation_path),
-            kind: SignerKind::Local,
-            local_signer: Some(signer),
-            rpc_url,
-            trezor_signer: None,
-            watch_address: None
-        })
-    }
-
-    pub async fn new_trezor(
-        chain_id: u64,
-        account_index: u64,
-        device_id: String,
-        rpc_url: String
-    ) -> Result<Self, Error> {
-        let derivation = HDPath::TrezorLive(account_index.try_into().unwrap());
-
-        let signer = TrezorSigner::new(derivation, Some(chain_id))
-            .await
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let derivation_path = format!("m/44'/60'/0'/0/{account_index}'");
-
-        let rpc_url = rpc_url.parse()
-            .map_err(|_| Error::AlloyError { description: "Invalid URL".to_string() })?;
-
-        Ok(Self {
-            chain_id,
-            derivation_path: Some(derivation_path),
-            kind: SignerKind::Trezor,
-            local_signer: None,
-            trezor_signer: Some(signer),
-            watch_address: None,
-            rpc_url,
-         })
-    }
-
-    pub fn new_watch_only(
-        chain_id: u64,
         address: Arc<EthereumAddress>,
+        chain_id: u64,
         rpc_url: String
     ) -> Result<Self, Error> {
-        let rpc_url = rpc_url.parse()
+        let rpc_url: Url = rpc_url.parse()
             .map_err(|_| Error::AlloyError { description: "Invalid URL".to_string() })?;
 
-        let address: Address = address.as_ref().into();
-
         Ok(Self {
+            address: address.as_ref().into(),
             chain_id,
-            derivation_path: None,
-            kind: SignerKind::WatchOnly,
-            local_signer: None,
-            trezor_signer: None,
-            watch_address: Some(address),
+            provider: RootProvider::<Ethereum>::new_http(rpc_url.clone()),
             rpc_url,
+            runtime: make_runtime()
         })
     }
+}
 
+impl AlloyClient {
     pub fn address(&self) -> Arc<EthereumAddress> {
-        Arc::new(self.get_address().into())
+        Arc::new(self.address.into())
     }
 
     pub fn chain_id(&self) -> u64 {
         self.chain_id
     }
 
-    pub fn derivation_path(&self) -> Option<String> {
-        self.derivation_path.as_ref().map(|dp| dp.to_string())
+    pub fn erc20(
+        &self,
+        contract_address: Arc<EthereumAddress>
+    ) -> Arc<ERC20> {
+        Arc::new(
+            ERC20::new(
+                contract_address.as_ref().clone(),
+                self.address.into(),
+                self.provider.clone()
+            )
+        )
     }
 
-    pub async fn get_balance(&self) -> Result<Vec<u64>, Error> {
-        let provider = RootProvider::<Ethereum>::new_http(self.rpc_url.clone());
-        let runtime = Runtime::new();
+    pub async fn get_balance(&self) -> Result<String, Error> {
+        let provider = self.provider.clone();
+        let address = self.address.clone();
 
-        let balance = runtime.runtime.block_on(async {
-            provider.get_balance(self.get_address())
-                .await
-                .map_err(|e| Error::AlloyError { description: e.to_string() })
-        })?;
+        let balance = self.runtime
+            .spawn(async move { provider.get_balance(address).await })
+            .await?
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
 
-        Ok(balance.as_limbs().to_vec())
+        Ok(format!("{}", balance))
     }
 
-    pub async fn is_active_address(&self, address: Arc<EthereumAddress>) -> Result<bool, Error> {
-        Err(Error::NotImplemented)
+    pub async fn get_nonce(&self) -> Result<u64, Error> {
+        let provider = self.provider.clone();
+        let address = self.address.clone();
+
+        let nonce = self.runtime
+            .spawn(async move { provider.get_transaction_count(address.into()).await })
+            .await?
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        Ok(nonce)
+    }
+
+    pub async fn estimate_gas(
+        &self,
+        tx: Vec<u8>
+    ) -> Result<u64, Error> {
+        let provider = self.provider.clone();
+        let tx: TransactionRequest = serde_json::from_slice(&tx)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        self.runtime
+            .spawn(async move { provider.estimate_gas(tx).await })
+            .await?
+            .map_err(|e| Error::AlloyError { description: e.to_string() })
+    }
+
+    pub async fn estimate_fees(&self) -> Result<FeeData, Error> {
+        let provider = self.provider.clone();
+
+        let fee_data = self.runtime
+            .spawn(async move { provider.estimate_eip1559_fees().await })
+            .await?
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        Ok(FeeData {
+            max_fee_per_gas: format!("{}", fee_data.max_fee_per_gas),
+            priority_fee_per_gas: format!("{}", fee_data.max_priority_fee_per_gas)
+        })
+    }
+
+    pub fn make_transfer_tx(
+        &self,
+        to: Arc<EthereumAddress>,
+        amount: String
+    ) -> Result<Vec<u8>, Error> {
+        let amount = amount.parse::<alloy_primitives::U256>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let tx_request = TransactionRequest::default()
+            .from(self.address.clone().into())
+            .to(to.as_ref().into())
+            .value(amount);
+
+        serde_json::to_vec(&tx_request)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })
     }
 
     pub fn rpc_url(&self) -> String {
         self.rpc_url.to_string()
     }
-}
 
-impl AlloyClient {
-    fn get_address(&self) -> Address {
-        match self.kind {
-            SignerKind::Local => self.local_signer.as_ref().unwrap().address(),
-            SignerKind::Trezor => self.trezor_signer.as_ref().unwrap().address(),
-            SignerKind::WatchOnly => self.watch_address.unwrap(),
-        }
+    pub async fn send_transaction(
+        &self,
+        tx: Vec<u8>,
+        wallet: Arc<AlloyWallet>,
+        gas_limit: u64,
+        fee_data: FeeData
+    ) -> Result<String, Error> {
+        let max_fee_per_gas = fee_data.max_fee_per_gas.parse::<u128>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let max_priority_fee_per_gas = fee_data.priority_fee_per_gas.parse::<u128>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let mut tx_request: TransactionRequest = serde_json::from_slice(&tx)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let nonce = self.get_nonce().await?;
+
+        tx_request = tx_request
+            .gas_limit(gas_limit)
+            .max_fee_per_gas(max_fee_per_gas)
+            .max_priority_fee_per_gas(max_priority_fee_per_gas)
+            .nonce(nonce)
+            .with_chain_id(self.chain_id);
+
+        println!("Final tx request: {:?}", tx_request);
+
+        let tx_envelope = tx_request.build(&wallet.wallet)
+            .await
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        println!("Built tx envelope: {:?}", tx_envelope);
+
+        let provider = self.provider.clone();
+
+        let receipt = self.runtime
+            .spawn(async move { provider.send_tx_envelope(tx_envelope).await?.get_receipt().await })
+            .await?
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        Ok(format!("{:?}", receipt.transaction_hash))
     }
 }

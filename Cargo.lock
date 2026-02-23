@@ -10486,6 +10486,7 @@ dependencies = [
  "bip32",
  "bip39",
  "hex",
+ "serde_json",
  "sui-keys",
  "sui-sdk",
  "sui-types",

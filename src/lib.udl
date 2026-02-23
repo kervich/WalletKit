@@ -1,6 +1,79 @@
 namespace WalletKit {
 };
 
+interface AlloyClient {
+    [Throws=Error]
+    constructor(EthereumAddress address, u64 chain_id, string rpc_url);
+
+    EthereumAddress address();
+
+    u64 chain_id();
+
+    [Async, Throws=Error]
+    FeeData estimate_fees();
+
+    [Async, Throws=Error]
+    u64 estimate_gas(sequence<u8> tx);
+
+    ERC20 erc20(EthereumAddress contract_address);
+
+    [Async, Throws=Error]
+    string get_balance();
+
+    [Async, Throws=Error]
+    u64 get_nonce();
+
+    [Throws=Error]
+    sequence<u8> make_transfer_tx(EthereumAddress to, string amount);
+
+    string rpc_url();
+
+    [Async, Throws=Error]
+    string send_transaction(sequence<u8> tx, AlloyWallet wallet, u64 gas_limit, FeeData fee_data);
+};
+
+interface AlloyWallet {
+    [Throws=Error]
+    constructor(u64 account_index, sequence<u8> private_key);
+
+    [Async, Throws=Error, Name=new_trezor]
+    constructor(u64 account_index, u64? chain_id);
+
+    EthereumAddress address();
+
+    string derivation_path();
+};
+
+interface ERC20 {
+    [Async, Throws=Error]
+    string balance_of(EthereumAddress owner);
+
+    EthereumAddress contract_address();
+
+    [Async, Throws=Error]
+    u8 decimals();
+
+    [Throws=Error]
+    sequence<u8> make_transfer_tx(EthereumAddress to, string amount);
+
+    [Throws=Error]
+    sequence<u8> make_transfer_from_tx(EthereumAddress from, EthereumAddress to, string amount);
+
+    [Async, Throws=Error]
+    string symbol();
+};
+
+[Error]
+interface Error {
+    AlloyError(string description);
+    MnemonicError(string description);
+    InvalidAddress(string description);
+    NotImplemented();
+    RuntimeError(string description);
+    SuiError(string description);
+    TrezorError(string description);
+};
+
 interface EthereumAddress {
     [Throws=Error]
     constructor(string string);
@@ -8,54 +81,9 @@ interface EthereumAddress {
     string to_string();
 };
 
-[Error]
-interface Error {
-    AlloyError(string description);
-    MnemonicError(string description);
-    NotImplemented();
-    SuiError(string description);
-    TrezorError(string description);
-};
-
-interface AlloyClient {
-    [Throws=Error]
-    constructor(u64 chain_id, u64 account_index, sequence<u8> private_key, string? password, string rpc_url);
-
-    [Async, Throws=Error, Name=new_trezor]
-    constructor(u64 chain_id, u64 account_index, string device_id, string rpc_url);
-
-    [Throws=Error, Name=new_watch_only]
-    constructor(u64 chain_id, EthereumAddress address, string rpc_url);
-
-    EthereumAddress address();
-
-    u64 chain_id();
-
-    string? derivation_path();
-
-    [Async, Throws=Error]
-    sequence<u64> get_balance();
-
-    [Async, Throws=Error]
-    boolean is_active_address(EthereumAddress address);
-
-    string rpc_url();
-};
-
-interface ERC20 {
-    [Throws=Error]
-    constructor(EthereumAddress address, string rpc_url);
-
-    EthereumAddress address();
-
-    [Async, Throws=Error]
-    u8 decimals();
-
-    [Async, Throws=Error]
-    string symbol();
-
-    [Async, Throws=Error]
-    sequence<u64> balance_of(EthereumAddress owner);
+dictionary FeeData {
+    string max_fee_per_gas;
+    string priority_fee_per_gas;
 };
 
 interface Mnemonic {
@@ -69,14 +97,14 @@ interface Mnemonic {
     sequence<u8> entropy();
 };
 
-interface Trezor {
-    [Async, Throws=Error]
-    constructor();
-
-    string device_id();
-    string model();
-    string revision();
-    string vendor();
+enum SignatureScheme {
+    "BLS12381",
+    "ED25519",
+    "MultiSig",
+    "Secp256k1",
+    "Secp256r1",
+    "ZkLoginAuthenticator",
+    "PasskeyAuthenticator",
 };
 
 interface SuiAddress {
@@ -86,29 +114,54 @@ interface SuiAddress {
     string to_string();
 };
 
-interface SuiClient {
-    [Throws=Error]
-    constructor(u64 account_index, SignatureScheme key_scheme, sequence<u8> private_key, string? password, string rpc_url);
+dictionary SuiBalance {
+    string coin_type;
+    string amount;
+};
 
-    [Throws=Error, Name=new_watch_only]
+dictionary SuiCoinMetadata {
+    string name;
+    string symbol;
+    u8 decimals;
+    string description;
+    string? icon_url;
+};
+
+interface SuiClient {
+    [Async, Throws=Error]
     constructor(SuiAddress address, string rpc_url);
 
     SuiAddress address();
-    string? derivation_path();
 
     [Async, Throws=Error]
     boolean is_active_address(SuiAddress address);
 
     [Async, Throws=Error]
-    sequence<u64> get_balance(string coin_type);
+    sequence<SuiBalance> get_all_balances(SuiAddress owner);
+
+    [Async, Throws=Error]
+    string get_balance(string? coin_type);
+
+    [Async, Throws=Error]
+    SuiCoinMetadata? get_coin_metadata(string coin_type);
 };
 
-enum SignatureScheme {
-    "BLS12381",
-    "ED25519",
-    "MultiSig",
-    "Secp256k1",
-    "Secp256r1",
-    "ZkLoginAuthenticator",
-    "PasskeyAuthenticator",
+interface SuiWallet {
+    [Throws=Error]
+    constructor(u64 account_index, SignatureScheme key_scheme, sequence<u8> private_key);
+
+    SuiAddress address();
+
+    string derivation_path();
+};
+
+
+interface Trezor {
+    [Async, Throws=Error]
+    constructor();
+
+    string device_id();
+    string model();
+    string revision();
+    string vendor();
 };
