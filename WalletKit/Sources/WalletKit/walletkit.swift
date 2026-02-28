@@ -451,30 +451,6 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-fileprivate struct FfiConverterBool : FfiConverter {
-    typealias FfiType = Int8
-    typealias SwiftType = Bool
-
-    public static func lift(_ value: Int8) throws -> Bool {
-        return value != 0
-    }
-
-    public static func lower(_ value: Bool) -> Int8 {
-        return value ? 1 : 0
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
-        return try lift(readInt(&buf))
-    }
-
-    public static func write(_ value: Bool, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(value))
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -524,7 +500,7 @@ public protocol AlloyClientProtocol: AnyObject, Sendable {
     
     func erc20(contractAddress: EthereumAddress)  -> Erc20
     
-    func estimateFees() async throws  -> FeeData
+    func estimateFees() async throws  -> [UInt8]
     
     func estimateGas(tx: [UInt8]) async throws  -> UInt64
     
@@ -532,11 +508,11 @@ public protocol AlloyClientProtocol: AnyObject, Sendable {
     
     func getNonce() async throws  -> UInt64
     
-    func makeTransferTx(to: EthereumAddress, amount: String) throws  -> [UInt8]
-    
     func rpcUrl()  -> String
     
-    func sendTransaction(tx: [UInt8], wallet: AlloyWallet, gasLimit: UInt64, feeData: FeeData) async throws  -> String
+    func send(txEnvelope: [UInt8]) async throws  -> String
+    
+    func txRequest(to: EthereumAddress, amount: String, nonce: UInt64?, gasLimit: UInt64?, fees: [UInt8]?) async throws  -> [UInt8]
     
 }
 open class AlloyClient: AlloyClientProtocol, @unchecked Sendable {
@@ -622,7 +598,7 @@ open func erc20(contractAddress: EthereumAddress) -> Erc20  {
 })
 }
     
-open func estimateFees()async throws  -> FeeData  {
+open func estimateFees()async throws  -> [UInt8]  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
@@ -634,7 +610,7 @@ open func estimateFees()async throws  -> FeeData  {
             pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
             completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
             freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeFeeData_lift,
+            liftFunc: FfiConverterSequenceUInt8.lift,
             errorHandler: FfiConverterTypeError_lift
         )
 }
@@ -690,16 +666,6 @@ open func getNonce()async throws  -> UInt64  {
         )
 }
     
-open func makeTransferTx(to: EthereumAddress, amount: String)throws  -> [UInt8]  {
-    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeError_lift) {
-    uniffi_walletkit_fn_method_alloyclient_make_transfer_tx(
-            self.uniffiCloneHandle(),
-        FfiConverterTypeEthereumAddress_lower(to),
-        FfiConverterString.lower(amount),$0
-    )
-})
-}
-    
 open func rpcUrl() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_walletkit_fn_method_alloyclient_rpc_url(
@@ -708,19 +674,36 @@ open func rpcUrl() -> String  {
 })
 }
     
-open func sendTransaction(tx: [UInt8], wallet: AlloyWallet, gasLimit: UInt64, feeData: FeeData)async throws  -> String  {
+open func send(txEnvelope: [UInt8])async throws  -> String  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_walletkit_fn_method_alloyclient_send_transaction(
+                uniffi_walletkit_fn_method_alloyclient_send(
                     self.uniffiCloneHandle(),
-                    FfiConverterSequenceUInt8.lower(tx),FfiConverterTypeAlloyWallet_lower(wallet),FfiConverterUInt64.lower(gasLimit),FfiConverterTypeFeeData_lower(feeData)
+                    FfiConverterSequenceUInt8.lower(txEnvelope)
                 )
             },
             pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
             completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
             freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func txRequest(to: EthereumAddress, amount: String, nonce: UInt64?, gasLimit: UInt64?, fees: [UInt8]?)async throws  -> [UInt8]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_alloyclient_tx_request(
+                    self.uniffiCloneHandle(),
+                    FfiConverterTypeEthereumAddress_lower(to),FfiConverterString.lower(amount),FfiConverterOptionUInt64.lower(nonce),FfiConverterOptionUInt64.lower(gasLimit),FfiConverterOptionSequenceUInt8.lower(fees)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt8.lift,
             errorHandler: FfiConverterTypeError_lift
         )
 }
@@ -780,6 +763,8 @@ public protocol AlloyWalletProtocol: AnyObject, Sendable {
     func address()  -> EthereumAddress
     
     func derivationPath()  -> String
+    
+    func sign(txRequest: [UInt8]) async throws  -> [UInt8]
     
 }
 open class AlloyWallet: AlloyWalletProtocol, @unchecked Sendable {
@@ -870,6 +855,23 @@ open func derivationPath() -> String  {
 })
 }
     
+open func sign(txRequest: [UInt8])async throws  -> [UInt8]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_alloywallet_sign(
+                    self.uniffiCloneHandle(),
+                    FfiConverterSequenceUInt8.lower(txRequest)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt8.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
 
     
 }
@@ -930,7 +932,7 @@ public protocol Erc20Protocol: AnyObject, Sendable {
     
     func makeTransferFromTx(from: EthereumAddress, to: EthereumAddress, amount: String) throws  -> [UInt8]
     
-    func makeTransferTx(to: EthereumAddress, amount: String) throws  -> [UInt8]
+    func makeTransferTx(to: EthereumAddress, amount: String, nonce: UInt64?, gasLimit: UInt64?, fees: [UInt8]?) throws  -> [UInt8]
     
     func symbol() async throws  -> String
     
@@ -1036,12 +1038,15 @@ open func makeTransferFromTx(from: EthereumAddress, to: EthereumAddress, amount:
 })
 }
     
-open func makeTransferTx(to: EthereumAddress, amount: String)throws  -> [UInt8]  {
+open func makeTransferTx(to: EthereumAddress, amount: String, nonce: UInt64?, gasLimit: UInt64?, fees: [UInt8]?)throws  -> [UInt8]  {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeError_lift) {
     uniffi_walletkit_fn_method_erc20_make_transfer_tx(
             self.uniffiCloneHandle(),
         FfiConverterTypeEthereumAddress_lower(to),
-        FfiConverterString.lower(amount),$0
+        FfiConverterString.lower(amount),
+        FfiConverterOptionUInt64.lower(nonce),
+        FfiConverterOptionUInt64.lower(gasLimit),
+        FfiConverterOptionSequenceUInt8.lower(fees),$0
     )
 })
 }
@@ -1492,13 +1497,17 @@ public protocol SuiClientProtocol: AnyObject, Sendable {
     
     func address()  -> SuiAddress
     
-    func getAllBalances(owner: SuiAddress) async throws  -> [SuiBalance]
+    func getAllBalances(owner: SuiAddress) async throws  -> [UInt8]
     
     func getBalance(coinType: String?) async throws  -> String
     
     func getCoinMetadata(coinType: String) async throws  -> SuiCoinMetadata?
     
-    func isActiveAddress(address: SuiAddress) async throws  -> Bool
+    func getReferenceGasPrice() async throws  -> UInt64
+    
+    func send(txData: [UInt8], signature: [UInt8]) async throws  -> String
+    
+    func txData(coinType: String, to: SuiAddress, amount: UInt64, gasBudget: UInt64, gasPrice: UInt64) async throws  -> [UInt8]
     
 }
 open class SuiClient: SuiClientProtocol, @unchecked Sendable {
@@ -1573,7 +1582,7 @@ open func address() -> SuiAddress  {
 })
 }
     
-open func getAllBalances(owner: SuiAddress)async throws  -> [SuiBalance]  {
+open func getAllBalances(owner: SuiAddress)async throws  -> [UInt8]  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
@@ -1585,7 +1594,7 @@ open func getAllBalances(owner: SuiAddress)async throws  -> [SuiBalance]  {
             pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
             completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
             freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterSequenceTypeSuiBalance.lift,
+            liftFunc: FfiConverterSequenceUInt8.lift,
             errorHandler: FfiConverterTypeError_lift
         )
 }
@@ -1624,19 +1633,53 @@ open func getCoinMetadata(coinType: String)async throws  -> SuiCoinMetadata?  {
         )
 }
     
-open func isActiveAddress(address: SuiAddress)async throws  -> Bool  {
+open func getReferenceGasPrice()async throws  -> UInt64  {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_walletkit_fn_method_suiclient_is_active_address(
-                    self.uniffiCloneHandle(),
-                    FfiConverterTypeSuiAddress_lower(address)
+                uniffi_walletkit_fn_method_suiclient_get_reference_gas_price(
+                    self.uniffiCloneHandle()
+                    
                 )
             },
-            pollFunc: ffi_walletkit_rust_future_poll_i8,
-            completeFunc: ffi_walletkit_rust_future_complete_i8,
-            freeFunc: ffi_walletkit_rust_future_free_i8,
-            liftFunc: FfiConverterBool.lift,
+            pollFunc: ffi_walletkit_rust_future_poll_u64,
+            completeFunc: ffi_walletkit_rust_future_complete_u64,
+            freeFunc: ffi_walletkit_rust_future_free_u64,
+            liftFunc: FfiConverterUInt64.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func send(txData: [UInt8], signature: [UInt8])async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_suiclient_send(
+                    self.uniffiCloneHandle(),
+                    FfiConverterSequenceUInt8.lower(txData),FfiConverterSequenceUInt8.lower(signature)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeError_lift
+        )
+}
+    
+open func txData(coinType: String, to: SuiAddress, amount: UInt64, gasBudget: UInt64, gasPrice: UInt64)async throws  -> [UInt8]  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_walletkit_fn_method_suiclient_tx_data(
+                    self.uniffiCloneHandle(),
+                    FfiConverterString.lower(coinType),FfiConverterTypeSuiAddress_lower(to),FfiConverterUInt64.lower(amount),FfiConverterUInt64.lower(gasBudget),FfiConverterUInt64.lower(gasPrice)
+                )
+            },
+            pollFunc: ffi_walletkit_rust_future_poll_rust_buffer,
+            completeFunc: ffi_walletkit_rust_future_complete_rust_buffer,
+            freeFunc: ffi_walletkit_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt8.lift,
             errorHandler: FfiConverterTypeError_lift
         )
 }
@@ -1696,6 +1739,8 @@ public protocol SuiWalletProtocol: AnyObject, Sendable {
     func address()  -> SuiAddress
     
     func derivationPath()  -> String
+    
+    func sign(txData: [UInt8]) throws  -> [UInt8]
     
 }
 open class SuiWallet: SuiWalletProtocol, @unchecked Sendable {
@@ -1768,6 +1813,15 @@ open func derivationPath() -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_walletkit_fn_method_suiwallet_derivation_path(
             self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+open func sign(txData: [UInt8])throws  -> [UInt8]  {
+    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeError_lift) {
+    uniffi_walletkit_fn_method_suiwallet_sign(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceUInt8.lower(txData),$0
     )
 })
 }
@@ -1975,110 +2029,6 @@ public func FfiConverterTypeTrezor_lower(_ value: Trezor) -> UInt64 {
 }
 
 
-
-
-public struct FeeData: Equatable, Hashable {
-    public var maxFeePerGas: String
-    public var priorityFeePerGas: String
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(maxFeePerGas: String, priorityFeePerGas: String) {
-        self.maxFeePerGas = maxFeePerGas
-        self.priorityFeePerGas = priorityFeePerGas
-    }
-
-    
-}
-
-#if compiler(>=6)
-extension FeeData: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeFeeData: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FeeData {
-        return
-            try FeeData(
-                maxFeePerGas: FfiConverterString.read(from: &buf), 
-                priorityFeePerGas: FfiConverterString.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: FeeData, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.maxFeePerGas, into: &buf)
-        FfiConverterString.write(value.priorityFeePerGas, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeFeeData_lift(_ buf: RustBuffer) throws -> FeeData {
-    return try FfiConverterTypeFeeData.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeFeeData_lower(_ value: FeeData) -> RustBuffer {
-    return FfiConverterTypeFeeData.lower(value)
-}
-
-
-public struct SuiBalance: Equatable, Hashable {
-    public var coinType: String
-    public var amount: String
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(coinType: String, amount: String) {
-        self.coinType = coinType
-        self.amount = amount
-    }
-
-    
-}
-
-#if compiler(>=6)
-extension SuiBalance: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeSuiBalance: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SuiBalance {
-        return
-            try SuiBalance(
-                coinType: FfiConverterString.read(from: &buf), 
-                amount: FfiConverterString.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: SuiBalance, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.coinType, into: &buf)
-        FfiConverterString.write(value.amount, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeSuiBalance_lift(_ buf: RustBuffer) throws -> SuiBalance {
-    return try FfiConverterTypeSuiBalance.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeSuiBalance_lower(_ value: SuiBalance) -> RustBuffer {
-    return FfiConverterTypeSuiBalance.lower(value)
-}
 
 
 public struct SuiCoinMetadata: Equatable, Hashable {
@@ -2447,6 +2397,30 @@ fileprivate struct FfiConverterOptionTypeSuiCoinMetadata: FfiConverterRustBuffer
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt8]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceUInt8.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceUInt8.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -2464,31 +2438,6 @@ fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterUInt8.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceTypeSuiBalance: FfiConverterRustBuffer {
-    typealias SwiftType = [SuiBalance]
-
-    public static func write(_ value: [SuiBalance], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeSuiBalance.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SuiBalance] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [SuiBalance]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeSuiBalance.read(from: &buf))
         }
         return seq
     }
@@ -2566,7 +2515,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_alloyclient_erc20() != 14222) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_estimate_fees() != 28827) {
+    if (uniffi_walletkit_checksum_method_alloyclient_estimate_fees() != 43402) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_alloyclient_estimate_gas() != 39476) {
@@ -2578,19 +2527,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_alloyclient_get_nonce() != 22716) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_make_transfer_tx() != 10503) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_walletkit_checksum_method_alloyclient_rpc_url() != 38683) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_alloyclient_send_transaction() != 7819) {
+    if (uniffi_walletkit_checksum_method_alloyclient_send() != 31787) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_alloyclient_tx_request() != 13043) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_alloywallet_address() != 22003) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_alloywallet_derivation_path() != 45225) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_alloywallet_sign() != 15573) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_erc20_balance_of() != 34671) {
@@ -2605,7 +2557,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_erc20_make_transfer_from_tx() != 19790) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_erc20_make_transfer_tx() != 63496) {
+    if (uniffi_walletkit_checksum_method_erc20_make_transfer_tx() != 46162) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_erc20_symbol() != 13026) {
@@ -2626,7 +2578,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_suiclient_address() != 24175) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_suiclient_get_all_balances() != 2075) {
+    if (uniffi_walletkit_checksum_method_suiclient_get_all_balances() != 41908) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_suiclient_get_balance() != 9502) {
@@ -2635,13 +2587,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_walletkit_checksum_method_suiclient_get_coin_metadata() != 51235) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_walletkit_checksum_method_suiclient_is_active_address() != 35745) {
+    if (uniffi_walletkit_checksum_method_suiclient_get_reference_gas_price() != 61683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_suiclient_send() != 42795) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_suiclient_tx_data() != 39980) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_suiwallet_address() != 59812) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_suiwallet_derivation_path() != 42916) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_walletkit_checksum_method_suiwallet_sign() != 9700) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_walletkit_checksum_method_trezor_device_id() != 60832) {

@@ -15,14 +15,14 @@ mod trezor;
 
 use crate::{
     alloy_wallet::AlloyWallet,
-    alloy_client::{ AlloyClient, FeeData },
+    alloy_client::AlloyClient,
     erc20::ERC20,
     error::Error,
     ethereum_address::EthereumAddress,
     mnemonic::Mnemonic,
     signature_scheme::SignatureScheme,
     sui_address::SuiAddress,
-    sui_client::{ SuiClient, SuiBalance },
+    sui_client::SuiClient,
     sui_coin_metadata::SuiCoinMetadata,
     sui_wallet::SuiWallet,
     trezor::Trezor

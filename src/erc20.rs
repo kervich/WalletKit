@@ -1,7 +1,8 @@
 use alloy::{
-    network::Ethereum,
+    network::{ Ethereum, TransactionBuilder },
     primitives::U256,
-    providers::{RootProvider},
+    providers::RootProvider,
+    rpc::types::TransactionRequest,
     sol,
     sol_types::SolInterface
 };
@@ -29,6 +30,7 @@ sol! {
 }
 
 pub struct ERC20 {
+    chain_id: u64,
     contract_address: EthereumAddress,
     own_address: EthereumAddress,
     provider: RootProvider<Ethereum>,
@@ -37,11 +39,12 @@ pub struct ERC20 {
 
 impl ERC20 {
     pub fn new(
+        chain_id: u64,
         contract_address: EthereumAddress,
         own_address: EthereumAddress,
         provider: RootProvider<Ethereum>,
     ) -> Self {
-        Self { contract_address, own_address, provider, runtime: make_runtime() }
+        Self { chain_id, contract_address, own_address, provider, runtime: make_runtime() }
     }
 
     pub fn contract_address(&self) -> Arc<EthereumAddress> {
@@ -78,10 +81,11 @@ impl ERC20 {
     pub fn make_transfer_tx(
         &self,
         recipient: Arc<EthereumAddress>,
-        amount: String
+        amount: String,
+        nonce: Option<u64>,
+        gas_limit: Option<u64>,
+        fees: Option<Vec<u8>>
     ) -> Result<Vec<u8>, Error> {
-        println!("Making transfer tx: self={}, recipient={}, amount={}", self.own_address, recipient, amount);
-
         let amount = amount.parse::<U256>()
             .map_err(|e| Error::AlloyError { description: e.to_string() })?;
 
@@ -90,10 +94,28 @@ impl ERC20 {
             value: amount,
         });
 
-        let tx_request = alloy::rpc::types::eth::TransactionRequest::default()
+        let mut tx_request = TransactionRequest::default()
             .from(self.own_address.clone().into())
             .to(self.contract_address.clone().into())
+            .with_chain_id(self.chain_id)
             .input(call.abi_encode().into());
+
+        if let Some(gas_limit) = gas_limit {
+            tx_request = tx_request.gas_limit(gas_limit);
+        }
+
+        if let Some(fees) = fees {
+            let fees: alloy::eips::eip1559::Eip1559Estimation = serde_json::from_slice(&fees)
+                .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+            tx_request = tx_request
+                .max_fee_per_gas(fees.max_fee_per_gas)
+                .max_priority_fee_per_gas(fees.max_priority_fee_per_gas);
+        }
+
+        if let Some(nonce) = nonce {
+            tx_request = tx_request.nonce(nonce);
+        }
 
         let data = serde_json::to_string(&tx_request)
             .map_err(|e| Error::AlloyError { description: e.to_string() })?;
@@ -124,7 +146,7 @@ impl ERC20 {
             value: amount,
         });
 
-        let tx_request = alloy::rpc::types::eth::TransactionRequest::default()
+        let tx_request = TransactionRequest::default()
             .from(self.own_address.clone().into())
             .input(call.abi_encode().into());
 

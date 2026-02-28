@@ -1,25 +1,19 @@
 use alloy::{
+    consensus::{EthereumTxEnvelope, TxEip4844Variant},
     network::{ Ethereum, TransactionBuilder },
     primitives::Address,
     providers::{ Provider, RootProvider },
     rpc::types::TransactionRequest,
     transports::http::reqwest::Url
 };
-
 use std::sync::Arc;
 
 use crate::{
-    alloy_wallet::AlloyWallet,
     erc20::ERC20,
     error::Error,
     ethereum_address::EthereumAddress,
     make_runtime
 };
-
-pub struct FeeData {
-    pub max_fee_per_gas: String,
-    pub priority_fee_per_gas: String
-}
 
 pub struct AlloyClient {
     address: Address,
@@ -63,6 +57,7 @@ impl AlloyClient {
     ) -> Arc<ERC20> {
         Arc::new(
             ERC20::new(
+                self.chain_id,
                 contract_address.as_ref().clone(),
                 self.address.into(),
                 self.provider.clone()
@@ -108,73 +103,24 @@ impl AlloyClient {
             .map_err(|e| Error::AlloyError { description: e.to_string() })
     }
 
-    pub async fn estimate_fees(&self) -> Result<FeeData, Error> {
+    pub async fn estimate_fees(&self) -> Result<Vec<u8>, Error> {
         let provider = self.provider.clone();
 
-        let fee_data = self.runtime
+        let fees = self.runtime
             .spawn(async move { provider.estimate_eip1559_fees().await })
             .await?
             .map_err(|e| Error::AlloyError { description: e.to_string() })?;
 
-        Ok(FeeData {
-            max_fee_per_gas: format!("{}", fee_data.max_fee_per_gas),
-            priority_fee_per_gas: format!("{}", fee_data.max_priority_fee_per_gas)
-        })
-    }
-
-    pub fn make_transfer_tx(
-        &self,
-        to: Arc<EthereumAddress>,
-        amount: String
-    ) -> Result<Vec<u8>, Error> {
-        let amount = amount.parse::<alloy_primitives::U256>()
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let tx_request = TransactionRequest::default()
-            .from(self.address.clone().into())
-            .to(to.as_ref().into())
-            .value(amount);
-
-        serde_json::to_vec(&tx_request)
+        serde_json::to_vec(&fees)
             .map_err(|e| Error::AlloyError { description: e.to_string() })
     }
 
-    pub fn rpc_url(&self) -> String {
-        self.rpc_url.to_string()
-    }
-
-    pub async fn send_transaction(
+    pub async fn send(
         &self,
-        tx: Vec<u8>,
-        wallet: Arc<AlloyWallet>,
-        gas_limit: u64,
-        fee_data: FeeData
+        tx_envelope: Vec<u8>
     ) -> Result<String, Error> {
-        let max_fee_per_gas = fee_data.max_fee_per_gas.parse::<u128>()
+        let tx_envelope: EthereumTxEnvelope<TxEip4844Variant> = serde_json::from_slice(&tx_envelope)
             .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let max_priority_fee_per_gas = fee_data.priority_fee_per_gas.parse::<u128>()
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let mut tx_request: TransactionRequest = serde_json::from_slice(&tx)
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        let nonce = self.get_nonce().await?;
-
-        tx_request = tx_request
-            .gas_limit(gas_limit)
-            .max_fee_per_gas(max_fee_per_gas)
-            .max_priority_fee_per_gas(max_priority_fee_per_gas)
-            .nonce(nonce)
-            .with_chain_id(self.chain_id);
-
-        println!("Final tx request: {:?}", tx_request);
-
-        let tx_envelope = tx_request.build(&wallet.wallet)
-            .await
-            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
-
-        println!("Built tx envelope: {:?}", tx_envelope);
 
         let provider = self.provider.clone();
 
@@ -184,5 +130,47 @@ impl AlloyClient {
             .map_err(|e| Error::AlloyError { description: e.to_string() })?;
 
         Ok(format!("{:?}", receipt.transaction_hash))
+    }
+
+    pub async fn tx_request(
+        &self,
+        to: Arc<EthereumAddress>,
+        amount: String,
+        nonce: Option<u64>,
+        gas_limit: Option<u64>,
+        fees: Option<Vec<u8>>
+    ) -> Result<Vec<u8>, Error> {
+        let amount = amount.parse::<alloy_primitives::U256>()
+            .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+        let mut tx_request = TransactionRequest::default()
+            .from(self.address.clone().into())
+            .to(to.as_ref().into())
+            .value(amount)
+            .with_chain_id(self.chain_id);
+
+        if let Some(gas_limit) = gas_limit {
+            tx_request = tx_request.gas_limit(gas_limit);
+        }
+
+        if let Some(fees) = fees {
+            let fees: alloy::eips::eip1559::Eip1559Estimation = serde_json::from_slice(&fees)
+                .map_err(|e| Error::AlloyError { description: e.to_string() })?;
+
+            tx_request = tx_request
+                .max_fee_per_gas(fees.max_fee_per_gas)
+                .max_priority_fee_per_gas(fees.max_priority_fee_per_gas);
+        }
+
+        if let Some(nonce) = nonce {
+            tx_request = tx_request.nonce(nonce);
+        }
+
+        serde_json::to_vec(&tx_request)
+            .map_err(|e| Error::AlloyError { description: e.to_string() })
+    }
+
+    pub fn rpc_url(&self) -> String {
+        self.rpc_url.to_string()
     }
 }

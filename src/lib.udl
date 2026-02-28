@@ -10,7 +10,7 @@ interface AlloyClient {
     u64 chain_id();
 
     [Async, Throws=Error]
-    FeeData estimate_fees();
+    sequence<u8> estimate_fees();
 
     [Async, Throws=Error]
     u64 estimate_gas(sequence<u8> tx);
@@ -23,13 +23,13 @@ interface AlloyClient {
     [Async, Throws=Error]
     u64 get_nonce();
 
-    [Throws=Error]
-    sequence<u8> make_transfer_tx(EthereumAddress to, string amount);
+    [Async, Throws=Error]
+    sequence<u8> tx_request(EthereumAddress to, string amount, u64? nonce, u64? gas_limit, sequence<u8>? fees);
 
     string rpc_url();
 
     [Async, Throws=Error]
-    string send_transaction(sequence<u8> tx, AlloyWallet wallet, u64 gas_limit, FeeData fee_data);
+    string send(sequence<u8> tx_envelope);
 };
 
 interface AlloyWallet {
@@ -42,6 +42,9 @@ interface AlloyWallet {
     EthereumAddress address();
 
     string derivation_path();
+
+    [Async, Throws=Error]
+    sequence<u8> sign(sequence<u8> tx_request);
 };
 
 interface ERC20 {
@@ -54,7 +57,7 @@ interface ERC20 {
     u8 decimals();
 
     [Throws=Error]
-    sequence<u8> make_transfer_tx(EthereumAddress to, string amount);
+    sequence<u8> make_transfer_tx(EthereumAddress to, string amount, u64? nonce, u64? gas_limit, sequence<u8>? fees);
 
     [Throws=Error]
     sequence<u8> make_transfer_from_tx(EthereumAddress from, EthereumAddress to, string amount);
@@ -79,11 +82,6 @@ interface EthereumAddress {
     constructor(string string);
 
     string to_string();
-};
-
-dictionary FeeData {
-    string max_fee_per_gas;
-    string priority_fee_per_gas;
 };
 
 interface Mnemonic {
@@ -114,11 +112,6 @@ interface SuiAddress {
     string to_string();
 };
 
-dictionary SuiBalance {
-    string coin_type;
-    string amount;
-};
-
 dictionary SuiCoinMetadata {
     string name;
     string symbol;
@@ -134,16 +127,22 @@ interface SuiClient {
     SuiAddress address();
 
     [Async, Throws=Error]
-    boolean is_active_address(SuiAddress address);
-
-    [Async, Throws=Error]
-    sequence<SuiBalance> get_all_balances(SuiAddress owner);
+    sequence<u8> get_all_balances(SuiAddress owner);
 
     [Async, Throws=Error]
     string get_balance(string? coin_type);
 
     [Async, Throws=Error]
     SuiCoinMetadata? get_coin_metadata(string coin_type);
+
+    [Async, Throws=Error]
+    u64 get_reference_gas_price();
+
+    [Async, Throws=Error]
+    sequence<u8> tx_data(string coin_type, SuiAddress to, u64 amount, u64 gas_budget, u64 gas_price);
+
+    [Async, Throws=Error]
+    string send(sequence<u8> tx_data, sequence<u8> signature);
 };
 
 interface SuiWallet {
@@ -153,6 +152,9 @@ interface SuiWallet {
     SuiAddress address();
 
     string derivation_path();
+
+    [Throws=Error]
+    sequence<u8> sign(sequence<u8> tx_data);
 };
 
 

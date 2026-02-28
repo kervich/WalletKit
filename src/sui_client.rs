@@ -1,6 +1,3 @@
-use std::sync::Arc;
-use sui_sdk::{SuiClientBuilder};
-
 use crate::{
     error::Error,
     make_runtime,
@@ -8,16 +5,18 @@ use crate::{
     sui_coin_metadata::SuiCoinMetadata
 };
 
+use std::sync::Arc;
+use sui_sdk::SuiClientBuilder;
+use sui_sdk::rpc_types::SuiTransactionBlockResponseOptions;
+use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
+use sui_types::base_types::SuiAddress as SDKAddress;
+use sui_types::transaction::{ Argument, Command, Transaction, TransactionData };
+use sui_types::transaction_driver_types::ExecuteTransactionRequestType;
+
 pub struct SuiClient {
     address: SuiAddress,
     client: sui_sdk::SuiClient,
-    rpc_url: String,
     runtime: tokio::runtime::Runtime
-}
-
-pub struct SuiBalance {
-    pub coin_type: String,
-    pub amount: String,
 }
 
 impl SuiClient {
@@ -33,22 +32,17 @@ impl SuiClient {
             .await?
             .map_err(|e| Error::SuiError { description: e.to_string() })?;
 
-        Ok(Self {
-            address: (*address).clone(),
-            client,
-            rpc_url,
-            runtime: runtime
-        })
+        Ok(Self { address: (*address).clone(), client, runtime })
     }
 
     pub fn address(&self) -> Arc<SuiAddress> {
-        self.address.clone().into()
+        Arc::new(self.address.clone())
     }
 
     pub async fn get_all_balances(
         &self,
         owner: Arc<SuiAddress>
-    ) -> Result<Vec<SuiBalance>, Error> {
+    ) -> Result<Vec<u8>, Error> {
         let owner = (*owner).clone().into();
         let sui_client = self.client.clone();
 
@@ -62,16 +56,8 @@ impl SuiClient {
             .await?
             .map_err(|e| Error::SuiError { description: e.to_string() })?;
 
-        let result = balances.into_iter()
-            .map(|balance| {
-                SuiBalance {
-                    coin_type: balance.coin_type,
-                    amount: format!("{}", balance.total_balance),
-                }
-            })
-            .collect();
-
-        Ok(result)
+        serde_json::to_vec(&balances)
+            .map_err(|e| Error::SuiError { description: e.to_string() })
     }
 
     pub async fn get_balance(
@@ -105,22 +91,87 @@ impl SuiClient {
         Ok(metadata.map(|meta| meta.into()))
     }
 
-    pub async fn is_active_address(
+    pub async fn get_reference_gas_price(&self) -> Result<u64, Error> {
+        let client = self.client.clone();
+
+        self.runtime
+            .spawn(async move { client.read_api().get_reference_gas_price().await })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })
+    }
+
+    pub async fn tx_data(
         &self,
-        address: Arc<SuiAddress>
-    ) -> Result<bool, Error> {
-        self.runtime.block_on(async {
-            let client = SuiClientBuilder::default()
-                .build(self.rpc_url.clone())
-                .await
-                .map_err(|e| Error::SuiError { description: e.to_string() })?;
+        coin_type: String,
+        to: Arc<SuiAddress>,
+        amount: u64,
+        gas_budget: u64,
+        gas_price: u64,
+    ) -> Result<Vec<u8>, Error> {
+        let mut ptb = ProgrammableTransactionBuilder::new();
 
-            let balance = client.coin_read_api()
-                .get_balance((*address).clone().into(), None)
-                .await
-                .map_err(|e| Error::SuiError { description: e.to_string() })?;
+        let sender: SDKAddress = self.address.clone().into();
+        let client = self.client.clone();
 
-            Ok(balance.total_balance > 0)
-        })
+        let coins = self.runtime
+            .spawn(async move {
+                client.coin_read_api()
+                    .get_coins(sender, Some(coin_type), None, None)
+                    .await
+            })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+        let coin = coins.data.into_iter().next()
+            .ok_or_else(|| Error::SuiError { description: "Coin not found".to_string() })?;
+        let split_coin_amount = ptb.pure(amount)
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        ptb.command(Command::SplitCoins(Argument::GasCoin, vec![split_coin_amount]));
+
+        let recipient: SDKAddress = (*to).clone().into();
+        let argument_address = ptb.pure(recipient)
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        ptb.command(Command::TransferObjects(vec![Argument::Result(0)], argument_address));
+
+        let tx_data = TransactionData::new_programmable(
+            sender,
+            vec![coin.object_ref()],
+            ptb.finish(),
+            gas_budget,
+            gas_price,
+        );
+
+        serde_json::to_vec(&tx_data)
+            .map_err(|e| Error::SuiError { description: e.to_string() })
+    }
+
+    pub async fn send(
+        &self,
+        tx_data: Vec<u8>,
+        signature: Vec<u8>
+    ) -> Result<String, Error> {
+        let client = self.client.clone();
+
+        let tx_data: TransactionData = serde_json::from_slice(&tx_data)
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        let signature = serde_json::from_slice(&signature)
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        let response = self.runtime
+            .spawn(async move {
+                client.quorum_driver_api()
+                .execute_transaction_block(
+                    Transaction::from_data(tx_data, vec![signature]),
+                    SuiTransactionBlockResponseOptions::full_content(),
+                    Some(ExecuteTransactionRequestType::WaitForLocalExecution),
+                )
+                .await
+            })
+            .await?
+            .map_err(|e| Error::SuiError { description: e.to_string() })?;
+
+        Ok(response.digest.to_string())
     }
 }
